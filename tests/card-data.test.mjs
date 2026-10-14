@@ -78,6 +78,13 @@ assert.match(index, /img\.src\s*=\s*card\.front/, 'field card should show the fr
 assert.match(index, /board\.appendChild\(c\)/, 'played card should be added to the field');
 assert.match(index, /s\.remove\(\)/, 'played card should be removed from the hand');
 
+// The rotating 3D element must not itself use CSS filter, because filter flattens the 3D scene in browsers.
+const innerRule = index.match(/\.inner\{([^}]*)\}/)?.[1] || '';
+assert.doesNotMatch(innerRule, /filter\s*:/, '.inner must not use filter because it breaks the front/back 3D flip');
+assert.match(index, /\.slot\{[^}]*filter:drop-shadow\(/, 'card shadow should live on .slot instead of the rotating .inner');
+assert.match(index, /\.face\.back\{transform:rotateY\(0deg\)\}/, 'back face should have an explicit zero-degree transform');
+assert.match(index, /\.face\.front\{transform:rotateY\(180deg\)\}/, 'front face should start rotated 180 degrees');
+
 // Startup should only preload artwork needed by the starting hand, not every registered card.
 assert.doesNotMatch(index, /CARDS\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup should not preload the entire card registry');
 assert.match(index, /STARTING_HAND\.map\(getCard\)/, 'startup preload should resolve the starting hand cards');
