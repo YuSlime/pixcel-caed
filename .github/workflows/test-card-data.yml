@@ -2,12 +2,16 @@ name: Test card data
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/card-library-deck"]
     paths:
       - 'index.html'
       - 'data/cards.js'
+      - 'data/decks.js'
       - 'assets/cards/**'
       - 'tests/card-data.test.mjs'
+      - 'tests/card-assets.test.mjs'
+      - 'tests/deck-data.test.mjs'
+      - 'tests/card-library.test.mjs'
       - '.github/workflows/test-card-data.yml'
   workflow_dispatch:
 
@@ -20,5 +24,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Validate card registry, artwork and interactions
+      - name: Validate existing card interactions
         run: node tests/card-data.test.mjs
+      - name: Validate starter card assets
+        run: node tests/card-assets.test.mjs
+      - name: Validate deck data when present
+        run: test ! -f tests/deck-data.test.mjs || node tests/deck-data.test.mjs
+      - name: Validate card library when present
+        run: test ! -f tests/card-library.test.mjs || node tests/card-library.test.mjs
