@@ -6,6 +6,6 @@ window.CARDS = [
     attack: 3,
     defense: 2,
     front: './assets/card_front.png?v=hq512-front-1',
-    back: './assets/card_back.png?v=pages-3'
+    back: './assets/card_back.png?v=hq512-back-1'
   }
 ];
