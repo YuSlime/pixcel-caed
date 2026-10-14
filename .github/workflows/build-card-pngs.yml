@@ -19,15 +19,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Decode PNG files
+      - name: Decode and validate PNG files
         shell: bash
         run: |
           set -euo pipefail
-          cat assets/front360_01.b64 assets/front360_02.b64 assets/front360_03.b64 assets/front360_04.b64 assets/front360_05.b64 assets/front360_06.b64 assets/front360_07.b64 assets/front360_08.b64 assets/front360_09.b64 assets/front360_10.b64 | tr -d '\r\n ' | base64 -d > assets/card_front.png
-          cat assets/hq_back_01.b64 assets/hq_back_02.b64 assets/hq_back_03.b64 assets/hq_back_04.b64 assets/hq_back_05.b64 assets/hq_back_06.b64 | tr -d '\r\n ' | base64 -d > assets/card_back.png
-          file assets/card_front.png assets/card_back.png
-          test -s assets/card_front.png
-          test -s assets/card_back.png
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, re, struct, binascii
+
+          def decode(parts, out):
+              text = ''.join(Path(p).read_text(encoding='utf-8') for p in parts)
+              text = re.sub(r'[^A-Za-z0-9+/=]', '', text)
+              text = text.replace('=', '')
+              text += '=' * ((4 - len(text) % 4) % 4)
+              data = base64.b64decode(text, validate=False)
+              Path(out).write_bytes(data)
+              validate_png(data, out)
+              print(f'{out}: {len(data)} bytes OK')
+
+          def validate_png(data, name):
+              sig = b'\x89PNG\r\n\x1a\n'
+              if not data.startswith(sig):
+                  raise SystemExit(f'{name}: invalid PNG signature')
+              pos = 8
+              seen_iend = False
+              while pos + 12 <= len(data):
+                  length = struct.unpack('>I', data[pos:pos+4])[0]
+                  ctype = data[pos+4:pos+8]
+                  end = pos + 12 + length
+                  if end > len(data):
+                      raise SystemExit(f'{name}: truncated PNG chunk')
+                  chunk = data[pos+8:pos+8+length]
+                  expected = struct.unpack('>I', data[pos+8+length:pos+12+length])[0]
+                  actual = binascii.crc32(ctype + chunk) & 0xffffffff
+                  if actual != expected:
+                      raise SystemExit(f'{name}: CRC mismatch in {ctype!r}')
+                  pos = end
+                  if ctype == b'IEND':
+                      seen_iend = True
+                      break
+              if not seen_iend:
+                  raise SystemExit(f'{name}: missing IEND')
+
+          decode([
+              'assets/front360_01.b64','assets/front360_02.b64','assets/front360_03.b64','assets/front360_04.b64','assets/front360_05.b64',
+              'assets/front360_06.b64','assets/front360_07.b64','assets/front360_08.b64','assets/front360_09.b64','assets/front360_10.b64'
+          ], 'assets/card_front.png')
+
+          decode([
+              'assets/hq_back_01.b64','assets/hq_back_02.b64','assets/hq_back_03.b64','assets/hq_back_04.b64','assets/hq_back_05.b64','assets/hq_back_06.b64'
+          ], 'assets/card_back.png')
+          PY
 
       - name: Commit PNG files
         shell: bash
