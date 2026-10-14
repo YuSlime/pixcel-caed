@@ -6,8 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'data/cards.js'
-      - 'assets/card_front.png'
-      - 'assets/card_back.png'
+      - 'assets/cards/**'
       - 'tests/card-data.test.mjs'
       - '.github/workflows/test-card-data.yml'
   workflow_dispatch:
@@ -21,24 +20,5 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Test card registry
+      - name: Validate card registry, artwork and interactions
         run: node tests/card-data.test.mjs
-      - name: Verify high-resolution card images
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import struct
-
-          def check(path):
-              data = Path(path).read_bytes()
-              if not data.startswith(b'\x89PNG\r\n\x1a\n'):
-                  raise SystemExit(f'{path} is not a PNG')
-              w, h = struct.unpack('>II', data[16:24])
-              print(f'{path}: {w}x{h}')
-              if (w, h) != (512, 683):
-                  raise SystemExit(f'{path}: expected 512x683, got {w}x{h}')
-
-          check('assets/card_front.png')
-          check('assets/card_back.png')
-          PY
