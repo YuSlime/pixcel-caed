@@ -5,8 +5,6 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/build-card-pngs.yml'
-      - 'assets/front_*.b64'
-      - 'assets/back_*.b64'
   workflow_dispatch:
 
 permissions:
@@ -19,67 +17,96 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild valid PNG files from known-good card art
+      - name: Rebuild verified 512px front card
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from pathlib import Path
-          from PIL import Image
-          import base64, io, re, struct, binascii
+          import base64, binascii, hashlib, re, struct
+
+          EXPECTED_SIZE = 91112
+          EXPECTED_SHA = '49803fdb4d82a9e747ff8230e24fa841216e8e4a94cafdd99d3ac83467db81e4'
+          EXPECTED_B64_LEN = ((EXPECTED_SIZE + 2) // 3) * 4
 
           def clean(path):
               return re.sub(r'[^A-Za-z0-9+/=]', '', Path(path).read_text(encoding='utf-8'))
 
-          def decode_webp(parts, out):
-              text=''.join(clean(p) for p in parts)
-              raw=base64.b64decode(text, validate=True)
-              if raw[:4] != b'RIFF' or raw[8:12] != b'WEBP':
-                  raise SystemExit(f'{out}: source is not a valid WebP container')
-              with Image.open(io.BytesIO(raw)) as im:
-                  im.load()
-                  print(f'{out}: source {im.format} {im.size} {im.mode}')
-                  im=im.convert('RGBA')
-                  im.save(out, 'PNG', optimize=True)
-              validate_png(Path(out).read_bytes(), out)
-
-          def validate_png(data, name):
+          def validate_png(data):
               if not data.startswith(b'\x89PNG\r\n\x1a\n'):
-                  raise SystemExit(f'{name}: invalid PNG signature')
-              pos=8; seen=False
-              while pos+12 <= len(data):
-                  length=struct.unpack('>I',data[pos:pos+4])[0]
-                  ctype=data[pos+4:pos+8]
-                  end=pos+12+length
-                  if end>len(data): raise SystemExit(f'{name}: truncated chunk')
-                  chunk=data[pos+8:pos+8+length]
-                  exp=struct.unpack('>I',data[pos+8+length:pos+12+length])[0]
-                  got=binascii.crc32(ctype+chunk)&0xffffffff
-                  if got!=exp: raise SystemExit(f'{name}: CRC mismatch')
-                  pos=end
-                  if ctype==b'IEND': seen=True; break
-              if not seen or pos!=len(data): raise SystemExit(f'{name}: invalid PNG ending')
-              print(f'{name}: {len(data)} bytes PNG verified')
+                  raise ValueError('invalid PNG signature')
+              width, height = struct.unpack('>II', data[16:24])
+              if (width, height) != (512, 683):
+                  raise ValueError(f'wrong dimensions {width}x{height}')
+              pos = 8
+              seen_iend = False
+              while pos + 12 <= len(data):
+                  length = struct.unpack('>I', data[pos:pos+4])[0]
+                  ctype = data[pos+4:pos+8]
+                  end = pos + 12 + length
+                  if end > len(data):
+                      raise ValueError('truncated PNG chunk')
+                  chunk = data[pos+8:pos+8+length]
+                  expected = struct.unpack('>I', data[pos+8+length:pos+12+length])[0]
+                  actual = binascii.crc32(ctype + chunk) & 0xffffffff
+                  if actual != expected:
+                      raise ValueError(f'CRC mismatch in {ctype!r}')
+                  pos = end
+                  if ctype == b'IEND':
+                      seen_iend = True
+                      break
+              if not seen_iend or pos != len(data):
+                  raise ValueError('invalid PNG ending')
 
-          decode_webp([
-              'assets/front_1.b64','assets/front_2.b64','assets/front_3.b64','assets/front_4.b64','assets/front_5.b64'
-          ], 'assets/card_front.png')
-          decode_webp([
-              'assets/back_1.b64','assets/back_2.b64','assets/back_3.b64','assets/back_4.b64'
-          ], 'assets/card_back.png')
+          fixed = ''.join(clean(f'assets/hq_front_{i:02d}.b64') for i in range(1, 6))
+          src6 = clean('assets/hq_front_06.b64')
+          src7 = clean('assets/hq_front_07.b64')
+          suffix6 = clean('.repair/front06_suffix.txt')
+          suffix7 = clean('.repair/front07_suffix.txt')
+
+          keep_sum = EXPECTED_B64_LEN - len(fixed) - len(suffix6) - len(suffix7)
+          lo = max(0, keep_sum - len(src7))
+          hi = min(len(src6), keep_sum)
+          found = None
+
+          for keep6 in range(lo, hi + 1):
+              keep7 = keep_sum - keep6
+              text = fixed + src6[:keep6] + suffix6 + src7[:keep7] + suffix7
+              if len(text) != EXPECTED_B64_LEN:
+                  continue
+              try:
+                  data = base64.b64decode(text, validate=True)
+              except Exception:
+                  continue
+              if len(data) != EXPECTED_SIZE:
+                  continue
+              digest = hashlib.sha256(data).hexdigest()
+              if digest != EXPECTED_SHA:
+                  continue
+              validate_png(data)
+              found = (keep6, keep7, data)
+              break
+
+          if found is None:
+              raise SystemExit('Could not reconstruct verified 512px front card')
+
+          keep6, keep7, data = found
+          Path('assets/card_front.png').write_bytes(data)
+          print(f'card_front.png: 512x683, {len(data)} bytes')
+          print(f'SHA256: {hashlib.sha256(data).hexdigest()}')
+          print(f'Repair splice: front06={keep6}, front07={keep7}')
           PY
 
-      - name: Commit verified PNG files
+      - name: Commit verified 512px front card
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/card_front.png assets/card_back.png
+          git add assets/card_front.png
           if git diff --cached --quiet; then
-            echo 'PNG files are already up to date.'
+            echo 'Front PNG is already up to date.'
             exit 0
           fi
-          git commit -m 'Generate valid PNG card assets [skip card png build]'
+          git commit -m 'Upgrade front card to verified 512px PNG [skip card png build]'
           git push
