@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const cardsPath = new URL('../data/cards.js', import.meta.url);
+const repoRoot = new URL('../', import.meta.url);
+const cardsPath = new URL('data/cards.js', repoRoot);
 assert.equal(fs.existsSync(cardsPath), true, 'data/cards.js should exist');
 
 const source = fs.readFileSync(cardsPath, 'utf8');
@@ -11,21 +12,62 @@ vm.runInNewContext(source, sandbox, { filename: 'data/cards.js' });
 
 const cards = sandbox.window.CARDS;
 assert.ok(Array.isArray(cards), 'window.CARDS should be an array');
+assert.ok(cards.length > 0, 'at least one card should be registered');
+
+const required = ['id','name','cost','attack','defense','front','back'];
+const ids = new Set();
+const artwork = new Set();
+
+function localAssetPath(src) {
+  const clean = src.split('?')[0].split('#')[0];
+  assert.match(clean, /^\.\/assets\/cards\//, `card artwork should live under assets/cards/: ${src}`);
+  return new URL(clean.replace(/^\.\//, ''), repoRoot);
+}
+
+function assertPng512x683(fileUrl, label) {
+  assert.equal(fs.existsSync(fileUrl), true, `${label} should exist`);
+  const data = fs.readFileSync(fileUrl);
+  assert.deepEqual([...data.subarray(0, 8)], [137,80,78,71,13,10,26,10], `${label} should be a PNG`);
+  const width = data.readUInt32BE(16);
+  const height = data.readUInt32BE(20);
+  assert.equal(width, 512, `${label} width should be 512`);
+  assert.equal(height, 683, `${label} height should be 683`);
+}
+
+for (const card of cards) {
+  for (const key of required) {
+    assert.ok(Object.hasOwn(card, key), `${card.id || 'card'} should have ${key}`);
+  }
+  assert.equal(typeof card.id, 'string');
+  assert.ok(card.id.length > 0, 'card id should not be empty');
+  assert.equal(ids.has(card.id), false, `duplicate card id: ${card.id}`);
+  ids.add(card.id);
+
+  assert.equal(typeof card.name, 'string');
+  assert.ok(card.name.length > 0, `${card.id} name should not be empty`);
+  for (const stat of ['cost','attack','defense']) {
+    assert.equal(typeof card[stat], 'number', `${card.id}.${stat} should be a number`);
+    assert.ok(Number.isFinite(card[stat]) && card[stat] >= 0, `${card.id}.${stat} should be a non-negative finite number`);
+  }
+
+  artwork.add(card.front);
+  artwork.add(card.back);
+  assertPng512x683(localAssetPath(card.front), `${card.id} front`);
+  assertPng512x683(localAssetPath(card.back), `${card.id} back`);
+}
+
 const novice = cards.find(card => card.id === 'novice-fighter');
 assert.ok(novice, 'novice-fighter should be registered');
-for (const key of ['id','name','cost','attack','defense','front','back']) {
-  assert.ok(Object.hasOwn(novice, key), `novice-fighter should have ${key}`);
-}
 assert.equal(novice.name, 'Novice Fighter');
 assert.equal(novice.cost, 2);
 assert.equal(novice.attack, 3);
 assert.equal(novice.defense, 2);
 
-const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const index = fs.readFileSync(new URL('index.html', repoRoot), 'utf8');
 assert.match(index, /data\/cards\.js/, 'index.html should load data/cards.js');
 assert.match(index, /window\.CARDS|\bCARDS\b/, 'index.html should use the card registry');
 
-// Stage 3: keep the current battle-card interactions intact after the HQ asset upgrade.
+// Battle interaction regression checks.
 assert.match(index, /const\s+N\s*=\s*5\s*;/, 'starting hand size should remain 5');
 assert.match(index, /Array\(N\)\.fill\(DEFAULT_CARD_ID\)/, 'starting hand should be built from card IDs');
 assert.match(index, /class="face back"[^>]*><img src="\$\{card\.back\}"/, 'hand card back should use card.back');
@@ -37,4 +79,5 @@ assert.match(index, /board\.appendChild\(c\)/, 'played card should be added to t
 assert.match(index, /s\.remove\(\)/, 'played card should be removed from the hand');
 assert.match(index, /CARDS\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'front and back artwork should be preloaded');
 
-console.log('card data and battle interaction tests passed');
+console.log(`card registry OK: ${cards.length} cards, ${artwork.size} artwork references`);
+console.log('card data, artwork and battle interaction tests passed');
