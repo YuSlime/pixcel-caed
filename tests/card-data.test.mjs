@@ -82,8 +82,10 @@ assert.match(index, /s\.remove\(\)/, 'played card should be removed from the han
 const innerRule = index.match(/\.inner\{([^}]*)\}/)?.[1] || '';
 assert.doesNotMatch(innerRule, /filter\s*:/, '.inner must not use filter because it breaks the front/back 3D flip');
 assert.match(index, /\.slot\{[^}]*filter:drop-shadow\(/, 'card shadow should live on .slot instead of the rotating .inner');
-assert.match(index, /\.face\.back\{transform:rotateY\(0deg\)\}/, 'back face should have an explicit zero-degree transform');
-assert.match(index, /\.face\.front\{transform:rotateY\(180deg\)\}/, 'front face should start rotated 180 degrees');
+assert.match(index, /\.face\.back\{[^}]*transform:rotateY\(0deg\)[^}]*\}/, 'back face should have an explicit zero-degree transform');
+assert.match(index, /\.face\.front\{[^}]*transform:rotateY\(180deg\)[^}]*\}/, 'front face should start rotated 180 degrees');
+assert.match(index, /\.slot:hover\s+\.face\.back\{[^}]*opacity:0[^}]*\}/, 'hover should hide the back face');
+assert.match(index, /\.slot:hover\s+\.face\.front\{[^}]*opacity:1[^}]*\}/, 'hover should reveal the front face');
 
 // Startup should only preload artwork needed by the starting hand, not every registered card.
 assert.doesNotMatch(index, /CARDS\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup should not preload the entire card registry');
