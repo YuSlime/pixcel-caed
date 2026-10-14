@@ -1,0 +1,75 @@
+name: Import starter card PNGs
+
+on:
+  push:
+    branches: ["feature/card-library-deck"]
+    paths:
+      - '.card-import/READY'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check import payload
+        id: ready
+        shell: bash
+        run: |
+          if [ -f .card-import/READY ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rebuild PNG files
+        if: steps.ready.outputs.ready == 'true'
+        shell: python
+        run: |
+          import base64
+          import pathlib
+          import struct
+
+          mapping = {
+              'pebblout': pathlib.Path('assets/cards/pebblout/front.png'),
+              'flutterpuff': pathlib.Path('assets/cards/flutterpuff/front.png'),
+              'pip-bat': pathlib.Path('assets/cards/pip-bat/front.png'),
+              'wispy': pathlib.Path('assets/cards/wispy/front.png'),
+              'slime': pathlib.Path('assets/cards/slime/front.png'),
+          }
+
+          for card_id, output in mapping.items():
+              chunk_dir = pathlib.Path('.card-import') / card_id
+              chunks = sorted(chunk_dir.glob('*.txt'))
+              if not chunks:
+                  raise SystemExit(f'No chunks found for {card_id}')
+              encoded = ''.join(p.read_text().strip() for p in chunks)
+              data = base64.b64decode(encoded, validate=True)
+              if data[:8] != b'\x89PNG\r\n\x1a\n':
+                  raise SystemExit(f'{card_id}: not a PNG')
+              width, height = struct.unpack('>II', data[16:24])
+              if width != 512 or height not in (682, 683):
+                  raise SystemExit(f'{card_id}: unexpected dimensions {width}x{height}')
+              output.parent.mkdir(parents=True, exist_ok=True)
+              output.write_bytes(data)
+              print(card_id, len(data), f'{width}x{height}')
+
+      - name: Commit reconstructed PNG files
+        if: steps.ready.outputs.ready == 'true'
+        shell: bash
+        run: |
+          rm -rf .card-import
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/cards .card-import || true
+          if git diff --cached --quiet; then
+            echo "No image changes"
+            exit 0
+          fi
+          git commit -m "Build starter card PNG assets"
+          git push
