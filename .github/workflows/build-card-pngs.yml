@@ -25,8 +25,8 @@ jobs:
           from pathlib import Path
           import base64, binascii, hashlib, re, struct
 
-          EXPECTED_SIZE = 91112
-          EXPECTED_SHA = '49803fdb4d82a9e747ff8230e24fa841216e8e4a94cafdd99d3ac83467db81e4'
+          EXPECTED_SIZE = 91173
+          EXPECTED_SHA = 'c2a5927edb7df1d032372e7f5c7e0e512368b8d8bca84845d02cdf8a0a434d73'
           EXPECTED_B64_LEN = ((EXPECTED_SIZE + 2) // 3) * 4
 
           def clean(path):
