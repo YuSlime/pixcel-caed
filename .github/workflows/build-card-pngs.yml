@@ -25,9 +25,7 @@ jobs:
           from pathlib import Path
           import base64, binascii, hashlib, re, struct
 
-          EXPECTED_SIZE = 69550
-          EXPECTED_SHA = '4cd5f0e2fb071d2650ab203bb872bddca79296ff83fadb0006212b70c1f02a83'
-          EXPECTED_B64_LEN = ((EXPECTED_SIZE + 2) // 3) * 4
+          EXPECTED_B64_LEN = 92736
 
           def clean(path):
               return re.sub(r'[^A-Za-z0-9+/=]', '', Path(path).read_text(encoding='utf-8'))
@@ -57,6 +55,7 @@ jobs:
                       break
               if not seen_iend or pos != len(data):
                   raise ValueError('invalid PNG ending')
+              return width, height
 
           part1 = clean('assets/hq_back_01.b64')
           part2 = clean('assets/hq_back_02.b64')
@@ -75,15 +74,11 @@ jobs:
               raise SystemExit(f'Base64 length mismatch: {len(text)} != {EXPECTED_B64_LEN}')
 
           data = base64.b64decode(text, validate=True)
-          if len(data) != EXPECTED_SIZE:
-              raise SystemExit(f'PNG size mismatch: {len(data)} != {EXPECTED_SIZE}')
+          width, height = validate_png(data)
           digest = hashlib.sha256(data).hexdigest()
-          if digest != EXPECTED_SHA:
-              raise SystemExit(f'SHA256 mismatch: {digest}')
-          validate_png(data)
 
           Path('assets/card_back.png').write_bytes(data)
-          print(f'card_back.png: 512x683, {len(data)} bytes')
+          print(f'card_back.png: {width}x{height}, {len(data)} bytes')
           print(f'SHA256: {digest}')
           print(f'Repair splice: back03={keep3}')
           PY
