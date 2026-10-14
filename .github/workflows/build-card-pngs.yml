@@ -1,0 +1,44 @@
+name: Build card PNG assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-card-pngs.yml'
+      - 'assets/front360_*.b64'
+      - 'assets/hq_back_*.b64'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip card png build]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decode PNG files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat assets/front360_01.b64 assets/front360_02.b64 assets/front360_03.b64 assets/front360_04.b64 assets/front360_05.b64 assets/front360_06.b64 assets/front360_07.b64 assets/front360_08.b64 assets/front360_09.b64 assets/front360_10.b64 | tr -d '\r\n ' | base64 -d > assets/card_front.png
+          cat assets/hq_back_01.b64 assets/hq_back_02.b64 assets/hq_back_03.b64 assets/hq_back_04.b64 assets/hq_back_05.b64 assets/hq_back_06.b64 | tr -d '\r\n ' | base64 -d > assets/card_back.png
+          file assets/card_front.png assets/card_back.png
+          test -s assets/card_front.png
+          test -s assets/card_back.png
+
+      - name: Commit PNG files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/card_front.png assets/card_back.png
+          if git diff --cached --quiet; then
+            echo 'PNG files are already up to date.'
+            exit 0
+          fi
+          git commit -m 'Generate direct PNG card assets [skip card png build]'
+          git push
