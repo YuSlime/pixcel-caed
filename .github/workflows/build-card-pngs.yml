@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild verified 512px back card
+      - name: Rebuild exact 512px back card
         shell: bash
         run: |
           set -euo pipefail
@@ -25,6 +25,8 @@ jobs:
           from pathlib import Path
           import base64, binascii, hashlib, re, struct
 
+          EXPECTED_SIZE = 69550
+          EXPECTED_SHA = '4cd5f0e2fb071d2650ab203bb872bddca79296ff83fadb0006212b70c1f02a83'
           EXPECTED_B64_LEN = 92736
 
           def clean(path):
@@ -32,10 +34,10 @@ jobs:
 
           def validate_png(data):
               if not data.startswith(b'\x89PNG\r\n\x1a\n'):
-                  raise ValueError('invalid PNG signature')
+                  raise SystemExit('invalid PNG signature')
               width, height = struct.unpack('>II', data[16:24])
               if (width, height) != (512, 683):
-                  raise ValueError(f'wrong dimensions {width}x{height}')
+                  raise SystemExit(f'wrong dimensions {width}x{height}')
               pos = 8
               seen_iend = False
               while pos + 12 <= len(data):
@@ -43,44 +45,43 @@ jobs:
                   ctype = data[pos+4:pos+8]
                   end = pos + 12 + length
                   if end > len(data):
-                      raise ValueError('truncated PNG chunk')
+                      raise SystemExit('truncated PNG chunk')
                   chunk = data[pos+8:pos+8+length]
                   expected = struct.unpack('>I', data[pos+8+length:pos+12+length])[0]
                   actual = binascii.crc32(ctype + chunk) & 0xffffffff
                   if actual != expected:
-                      raise ValueError(f'CRC mismatch in {ctype!r}')
+                      raise SystemExit(f'CRC mismatch in {ctype!r}')
                   pos = end
                   if ctype == b'IEND':
                       seen_iend = True
                       break
               if not seen_iend or pos != len(data):
-                  raise ValueError('invalid PNG ending')
+                  raise SystemExit('invalid PNG ending')
               return width, height
 
-          part1 = clean('assets/hq_back_01.b64')
-          part2 = clean('assets/hq_back_02.b64')
-          src3 = clean('assets/hq_back_03.b64')
-          suffix3 = clean('.repair/back03_suffix.txt')
-          part4 = clean('assets/hq_back_04.b64')
-          part5 = clean('.repair/back05_full.txt')
-          part6 = clean('.repair/back06_full.txt')
-
-          keep3 = EXPECTED_B64_LEN - sum(map(len, [part1, part2, suffix3, part4, part5, part6]))
-          if not 0 <= keep3 <= len(src3):
-              raise SystemExit(f'Invalid back03 splice point: {keep3}')
-
-          text = part1 + part2 + src3[:keep3] + suffix3 + part4 + part5 + part6
+          parts = [
+              clean('assets/hq_back_01.b64'),
+              clean('assets/hq_back_02.b64'),
+              clean('.repair/back03_full.txt'),
+              clean('assets/hq_back_04.b64'),
+              clean('.repair/back05_full.txt'),
+              clean('.repair/back06_full.txt'),
+          ]
+          text = ''.join(parts)
           if len(text) != EXPECTED_B64_LEN:
               raise SystemExit(f'Base64 length mismatch: {len(text)} != {EXPECTED_B64_LEN}')
 
           data = base64.b64decode(text, validate=True)
-          width, height = validate_png(data)
+          if len(data) != EXPECTED_SIZE:
+              raise SystemExit(f'PNG size mismatch: {len(data)} != {EXPECTED_SIZE}')
           digest = hashlib.sha256(data).hexdigest()
+          if digest != EXPECTED_SHA:
+              raise SystemExit(f'SHA256 mismatch: {digest}')
+          width, height = validate_png(data)
 
           Path('assets/card_back.png').write_bytes(data)
           print(f'card_back.png: {width}x{height}, {len(data)} bytes')
-          print(f'SHA256: {digest}')
-          print(f'Repair splice: back03={keep3}')
+          print(f'SHA256: {digest} OK')
           PY
 
       - name: Commit verified 512px back card
