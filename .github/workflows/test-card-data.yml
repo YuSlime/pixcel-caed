@@ -1,0 +1,23 @@
+name: Test card data
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'index.html'
+      - 'data/cards.js'
+      - 'tests/card-data.test.mjs'
+      - '.github/workflows/test-card-data.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Test card registry
+        run: node tests/card-data.test.mjs
