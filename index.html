@@ -11,17 +11,21 @@
 <body>
 <section id="menu" class="screen"><div class="panel"><h1>PIXEL CARD</h1><div class="desc">カード反転・手札・場への配置テスト</div><div id="status" class="status">PNGカード画像を読み込み中...</div><button id="battleBtn" disabled>BATTLE</button></div></section>
 <section id="battle" class="screen"><header><b>BATTLE FIELD</b><button id="backBtn">メニューへ戻る</button></header><main id="board" class="board"></main><footer id="hand" class="hand"></footer><div id="msg"></div></section>
+<script src="./data/cards.js"></script>
 <script>
-const FRONT='./assets/card_front.png?v=pages-3';
-const BACK='./assets/card_back.png?v=pages-3';
-const N=5,menu=document.getElementById('menu'),battle=document.getElementById('battle'),board=document.getElementById('board'),hand=document.getElementById('hand'),msg=document.getElementById('msg'),battleBtn=document.getElementById('battleBtn'),statusEl=document.getElementById('status');
-function verifyImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve();img.onerror=()=>reject(new Error('PNG画像の読み込みに失敗'));img.src=src})}
-async function loadArt(){try{await Promise.all([verifyImage(FRONT),verifyImage(BACK)]);battleBtn.disabled=false;statusEl.textContent='READY - PNGカード画像を直接読み込みました'}catch(e){battleBtn.disabled=false;statusEl.textContent='画像読み込みに失敗しました';console.error(e)}}
+const CARDS=window.CARDS||[];
+const DEFAULT_CARD_ID='novice-fighter';
+const N=5;
+const STARTING_HAND=Array(N).fill(DEFAULT_CARD_ID);
+const menu=document.getElementById('menu'),battle=document.getElementById('battle'),board=document.getElementById('board'),hand=document.getElementById('hand'),msg=document.getElementById('msg'),battleBtn=document.getElementById('battleBtn'),statusEl=document.getElementById('status');
+function getCard(id){const card=CARDS.find(c=>c.id===id);if(!card)throw new Error(`Unknown card: ${id}`);return card}
+function verifyImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve();img.onerror=()=>reject(new Error(`PNG画像の読み込みに失敗: ${src}`));img.src=src})}
+async function loadArt(){try{if(!CARDS.length)throw new Error('カードデータがありません');const urls=[...new Set(CARDS.flatMap(card=>[card.front,card.back]))];await Promise.all(urls.map(verifyImage));battleBtn.disabled=false;statusEl.textContent=`READY - ${CARDS.length}種類のカードを読み込みました`}catch(e){battleBtn.disabled=false;statusEl.textContent='カードデータの読み込みに失敗しました';console.error(e)}}
 battleBtn.onclick=()=>{menu.style.display='none';battle.style.display='grid';reset()};
 document.getElementById('backBtn').onclick=()=>{battle.style.display='none';menu.style.display='flex'};
-function reset(){hand.innerHTML='';board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';for(let i=0;i<N;i++)hand.appendChild(makeCard())}
-function makeCard(){const s=document.createElement('div');s.className='slot';s.innerHTML=`<div class="inner"><div class="face back"><img src="${BACK}" alt="カード裏面"></div><div class="face front"><img src="${FRONT}" alt="Novice Fighter"></div></div>`;s.onclick=()=>playCard(s);return s}
-function playCard(s){document.getElementById('empty')?.remove();const c=document.createElement('div');c.className='fieldCard';const img=document.createElement('img');img.src=FRONT;img.alt='Novice Fighter';c.appendChild(img);board.appendChild(c);s.remove();toast('Novice Fighter を場に出しました')}
+function reset(){hand.innerHTML='';board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';STARTING_HAND.forEach(id=>hand.appendChild(makeCard(getCard(id))))}
+function makeCard(card){const s=document.createElement('div');s.className='slot';s.dataset.cardId=card.id;s.innerHTML=`<div class="inner"><div class="face back"><img src="${card.back}" alt="カード裏面"></div><div class="face front"><img src="${card.front}" alt="${card.name}"></div></div>`;s.onclick=()=>playCard(s,card);return s}
+function playCard(s,card){document.getElementById('empty')?.remove();const c=document.createElement('div');c.className='fieldCard';c.dataset.cardId=card.id;const img=document.createElement('img');img.src=card.front;img.alt=card.name;c.appendChild(img);board.appendChild(c);s.remove();toast(`${card.name} を場に出しました`)}
 function toast(t){msg.textContent=t;msg.classList.add('show');clearTimeout(window.mt);window.mt=setTimeout(()=>msg.classList.remove('show'),900)}
 loadArt();
 </script>
