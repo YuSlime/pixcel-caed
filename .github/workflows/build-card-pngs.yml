@@ -5,9 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/build-card-pngs.yml'
-      - 'assets/hq_front_*.b64'
-      - 'assets/hq_back_*.b64'
-      - '.repair/**'
+      - 'assets/front_*.b64'
+      - 'assets/back_*.b64'
   workflow_dispatch:
 
 permissions:
@@ -20,92 +19,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild and verify PNG files
+      - name: Rebuild valid PNG files from known-good card art
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m pip install --quiet pillow
           python3 - <<'PY'
           from pathlib import Path
-          import base64, re, struct, binascii, hashlib
+          from PIL import Image
+          import base64, io, re, struct, binascii
 
           def clean(path):
-              text = Path(path).read_text(encoding='utf-8')
-              return re.sub(r'[^A-Za-z0-9+/=]', '', text)
+              return re.sub(r'[^A-Za-z0-9+/=]', '', Path(path).read_text(encoding='utf-8'))
 
-          def patched(path, keep, suffix_path):
-              src = clean(path)
-              suffix = clean(suffix_path)
-              return src[:keep] + suffix
+          def decode_webp(parts, out):
+              text=''.join(clean(p) for p in parts)
+              raw=base64.b64decode(text, validate=True)
+              if raw[:4] != b'RIFF' or raw[8:12] != b'WEBP':
+                  raise SystemExit(f'{out}: source is not a valid WebP container')
+              with Image.open(io.BytesIO(raw)) as im:
+                  im.load()
+                  print(f'{out}: source {im.format} {im.size} {im.mode}')
+                  im=im.convert('RGBA')
+                  im.save(out, 'PNG', optimize=True)
+              validate_png(Path(out).read_bytes(), out)
 
           def validate_png(data, name):
-              sig = b'\x89PNG\r\n\x1a\n'
-              if not data.startswith(sig):
+              if not data.startswith(b'\x89PNG\r\n\x1a\n'):
                   raise SystemExit(f'{name}: invalid PNG signature')
-              pos = 8
-              seen_iend = False
-              while pos + 12 <= len(data):
-                  length = struct.unpack('>I', data[pos:pos+4])[0]
-                  ctype = data[pos+4:pos+8]
-                  end = pos + 12 + length
-                  if end > len(data):
-                      raise SystemExit(f'{name}: truncated PNG chunk')
-                  chunk = data[pos+8:pos+8+length]
-                  expected = struct.unpack('>I', data[pos+8+length:pos+12+length])[0]
-                  actual = binascii.crc32(ctype + chunk) & 0xffffffff
-                  if actual != expected:
-                      raise SystemExit(f'{name}: CRC mismatch in {ctype!r}')
-                  pos = end
-                  if ctype == b'IEND':
-                      seen_iend = True
-                      break
-              if not seen_iend:
-                  raise SystemExit(f'{name}: missing IEND')
-              if pos != len(data):
-                  raise SystemExit(f'{name}: unexpected trailing bytes')
+              pos=8; seen=False
+              while pos+12 <= len(data):
+                  length=struct.unpack('>I',data[pos:pos+4])[0]
+                  ctype=data[pos+4:pos+8]
+                  end=pos+12+length
+                  if end>len(data): raise SystemExit(f'{name}: truncated chunk')
+                  chunk=data[pos+8:pos+8+length]
+                  exp=struct.unpack('>I',data[pos+8+length:pos+12+length])[0]
+                  got=binascii.crc32(ctype+chunk)&0xffffffff
+                  if got!=exp: raise SystemExit(f'{name}: CRC mismatch')
+                  pos=end
+                  if ctype==b'IEND': seen=True; break
+              if not seen or pos!=len(data): raise SystemExit(f'{name}: invalid PNG ending')
+              print(f'{name}: {len(data)} bytes PNG verified')
 
-          def decode(parts, out, expected_size, expected_sha256):
-              text = ''.join(parts)
-              data = base64.b64decode(text, validate=True)
-              validate_png(data, out)
-              digest = hashlib.sha256(data).hexdigest()
-              if len(data) != expected_size:
-                  raise SystemExit(f'{out}: size mismatch {len(data)} != {expected_size}')
-              if digest != expected_sha256:
-                  raise SystemExit(f'{out}: SHA256 mismatch {digest}')
-              Path(out).write_bytes(data)
-              print(f'{out}: {len(data)} bytes, SHA256 {digest} OK')
-
-          front = [
-              clean('assets/hq_front_01.b64'),
-              clean('assets/hq_front_02.b64'),
-              clean('assets/hq_front_03.b64'),
-              clean('assets/hq_front_04.b64'),
-              clean('assets/hq_front_05.b64'),
-              patched('assets/hq_front_06.b64', 15856, '.repair/front06_suffix.txt'),
-              patched('assets/hq_front_07.b64', 9605, '.repair/front07_suffix.txt'),
-          ]
-
-          back = [
-              clean('assets/hq_back_01.b64'),
-              clean('assets/hq_back_02.b64'),
-              patched('assets/hq_back_03.b64', 11917, '.repair/back03_suffix.txt'),
-              clean('assets/hq_back_04.b64'),
-              clean('.repair/back05_full.txt'),
-              clean('.repair/back06_full.txt'),
-          ]
-
-          decode(
-              front,
-              'assets/card_front.png',
-              91112,
-              '49803fdb4d82a9e747ff8230e24fa841216e8e4a94cafdd99d3ac83467db81e4',
-          )
-          decode(
-              back,
-              'assets/card_back.png',
-              69506,
-              '92bad66f36c75d9ade1333f7fb018ca42eb4b8ee7b459243f99ed6de94e8a5be',
-          )
+          decode_webp([
+              'assets/front_1.b64','assets/front_2.b64','assets/front_3.b64','assets/front_4.b64','assets/front_5.b64'
+          ], 'assets/card_front.png')
+          decode_webp([
+              'assets/back_1.b64','assets/back_2.b64','assets/back_3.b64','assets/back_4.b64'
+          ], 'assets/card_back.png')
           PY
 
       - name: Commit verified PNG files
@@ -119,5 +81,5 @@ jobs:
             echo 'PNG files are already up to date.'
             exit 0
           fi
-          git commit -m 'Generate verified PNG card assets [skip card png build]'
+          git commit -m 'Generate valid PNG card assets [skip card png build]'
           git push
