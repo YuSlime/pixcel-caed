@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Card Game</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#07111e;color:white;overflow:hidden}
+button{font:inherit}
+.screen{position:fixed;inset:0}
+#menu{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center,#173d68 0,#0a1b2e 45%,#050b12 100%)}
+.panel{width:min(680px,92vw);padding:50px 25px;text-align:center;border:2px solid #365d86;border-radius:24px;background:rgba(7,19,33,.92);box-shadow:0 30px 80px #0008}
+h1{font-size:clamp(32px,7vw,64px);margin:0 0 12px;letter-spacing:5px}
+.desc{color:#a9c3dd;margin-bottom:34px}
+#battleBtn{border:0;border-radius:12px;padding:18px 60px;color:#fff;font-weight:900;font-size:20px;background:linear-gradient(#40a7ff,#1163ba);box-shadow:0 8px 0 #093c72;cursor:pointer}
+#battleBtn:hover{filter:brightness(1.12);transform:translateY(-2px)}
+#battle{display:none;grid-template-rows:56px 1fr 210px;height:100%}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #ffffff18;background:#08131f}
+#backBtn{padding:8px 12px;border:1px solid #ffffff25;background:#ffffff0b;color:#fff;border-radius:8px;cursor:pointer}
+.board{position:relative;display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;padding:30px;background:radial-gradient(circle at center,#163e67 0,#0d2339 36%,#08131f 100%);border-bottom:1px solid #ffffff15;overflow:auto}
+.board:before{content:"YOUR FIELD";position:absolute;top:14px;left:18px;color:#7fa6c9;font-size:12px;letter-spacing:2px}
+.empty{color:#8daac5;border:1px dashed #507293;padding:18px;border-radius:10px;text-align:center}
+.hand{position:relative;display:flex;align-items:end;justify-content:center;gap:12px;padding:30px 12px 15px;background:#07101a;overflow:visible}
+.hand:before{content:"YOUR HAND";position:absolute;left:16px;top:10px;color:#6f96bc;font-size:11px;letter-spacing:2px}
+.slot{width:130px;aspect-ratio:3/4;perspective:1000px;cursor:pointer;transition:.18s;position:relative}
+.slot:hover{transform:translateY(-24px) scale(1.06);z-index:20}
+.inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .5s ease}
+.slot:hover .inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:9px;overflow:hidden}
+.face.front{transform:rotateY(180deg)}
+.face img,.fieldCard img{width:100%;height:100%;object-fit:cover;display:block}
+.fieldCard{width:165px;aspect-ratio:3/4;animation:drop .25s ease-out;filter:drop-shadow(0 14px 12px #0008)}
+.fieldCard img{border-radius:10px}
+@keyframes drop{from{opacity:0;transform:translateY(60px) scale(.8)}to{opacity:1;transform:none}}
+#msg{position:absolute;top:70px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:8px;background:#06101be8;border:1px solid #4185bd;color:#d8efff;opacity:0;transition:.2s;pointer-events:none;z-index:99}
+#msg.show{opacity:1}
+@media(max-width:760px){#battle{grid-template-rows:52px 1fr 150px}.slot{width:18vw;max-width:100px;min-width:55px}.hand{gap:3px;padding-left:5px;padding-right:5px}.fieldCard{width:120px}}
+</style>
+</head>
+<body>
+<section id="menu" class="screen">
+  <div class="panel">
+    <h1>PIXEL CARD</h1>
+    <div class="desc">カード反転・手札・場への配置テスト</div>
+    <button id="battleBtn" onclick="startBattle()">BATTLE</button>
+  </div>
+</section>
+<section id="battle" class="screen">
+  <header>
+    <b>BATTLE FIELD</b>
+    <button id="backBtn" onclick="goMenu()">メニューへ戻る</button>
+  </header>
+  <main id="board" class="board">
+    <div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>
+  </main>
+  <footer id="hand" class="hand"></footer>
+  <div id="msg"></div>
+</section>
+<script>
+var CARD_COUNT = 5;
+function startBattle(){document.getElementById("menu").style.display="none";var battle=document.getElementById("battle");battle.style.display="grid";resetGame();}
+function goMenu(){document.getElementById("battle").style.display="none";document.getElementById("menu").style.display="flex";}
+function resetGame(){var hand=document.getElementById("hand");var board=document.getElementById("board");hand.innerHTML="";board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';for(var i=0;i<CARD_COUNT;i++){hand.appendChild(makeCard(i));}}
+function makeCard(i){var slot=document.createElement("div");slot.className="slot";slot.setAttribute("data-id",i);slot.onclick=function(){playCard(this);};slot.innerHTML='<div class="inner"><div class="face back"><img src="card_back.png" alt="カード裏面"></div><div class="face front"><img src="card_front.png" alt="Novice Fighter"></div></div>';return slot;}
+function playCard(slot){var empty=document.getElementById("empty");if(empty)empty.remove();var card=document.createElement("div");card.className="fieldCard";card.innerHTML='<img src="card_front.png" alt="Novice Fighter">';document.getElementById("board").appendChild(card);slot.remove();showMessage("Novice Fighter を場に出しました");}
+function showMessage(t){var m=document.getElementById("msg");m.textContent=t;m.className="show";clearTimeout(window.msgTimer);window.msgTimer=setTimeout(function(){m.className="";},900);}
+</script>
+</body>
+</html>
