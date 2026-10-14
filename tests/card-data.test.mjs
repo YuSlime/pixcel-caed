@@ -77,8 +77,12 @@ assert.match(index, /s\.onclick\s*=\s*\(\)\s*=>\s*playCard\(s,card\)/, 'click sh
 assert.match(index, /img\.src\s*=\s*card\.front/, 'field card should show the front artwork');
 assert.match(index, /board\.appendChild\(c\)/, 'played card should be added to the field');
 assert.match(index, /s\.remove\(\)/, 'played card should be removed from the hand');
-assert.match(index, /CARDS\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'front and back artwork should be preloaded');
-assert.match(index, /new Set\(CARDS\.flatMap/, 'duplicate artwork URLs should only be preloaded once');
+
+// Startup should only preload artwork needed by the starting hand, not every registered card.
+assert.doesNotMatch(index, /CARDS\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup should not preload the entire card registry');
+assert.match(index, /STARTING_HAND\.map\(getCard\)/, 'startup preload should resolve the starting hand cards');
+assert.match(index, /startupCards\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup preload should include both sides of needed cards');
+assert.match(index, /new Set\(startupCards\.flatMap/, 'duplicate starting-hand artwork should only be preloaded once');
 
 // 512x683 source art is intentionally rendered smaller for a crisp UI.
 assert.match(index, /\.slot\{width:120px;aspect-ratio:3\/4;/, 'desktop hand cards should render at 120px wide');
@@ -87,4 +91,4 @@ assert.match(index, /\.face img,\.fieldCard img\{width:100%;height:100%;object-f
 assert.match(index, /@media\(max-width:760px\).*\.fieldCard\{width:120px\}/s, 'mobile field cards should remain compact');
 
 console.log(`card registry OK: ${cards.length} cards, ${artwork.size} artwork references`);
-console.log('card data, HQ display, preload and battle interaction tests passed');
+console.log('card data, HQ display, scalable preload and battle interaction tests passed');
