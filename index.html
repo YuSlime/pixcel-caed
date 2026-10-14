@@ -15,10 +15,10 @@
 let FRONT='',BACK='';
 const N=5,menu=document.getElementById('menu'),battle=document.getElementById('battle'),board=document.getElementById('board'),hand=document.getElementById('hand'),msg=document.getElementById('msg'),battleBtn=document.getElementById('battleBtn'),statusEl=document.getElementById('status');
 const BACK_PARTS=['assets/back_1.b64','assets/back_2.b64','assets/back_3.b64','assets/back_4.b64'];
-const FRONT_PARTS=['assets/front_1.b64','assets/front_2.b64','assets/front_3.b64','assets/front_4.b64','assets/front_5.b64'];
+const FRONT_PARTS=['assets/hq_front_01.b64','assets/hq_front_02.b64','assets/hq_front_03.b64','assets/hq_front_04.b64','assets/hq_front_05.b64','assets/hq_front_06.b64','assets/hq_front_07.b64'];
 async function loadChunks(paths){const rows=await Promise.all(paths.map(async p=>{const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw new Error(`${p}: ${r.status}`);return (await r.text()).trim()}));return rows.join('')}
 function verifyImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve();img.onerror=()=>reject(new Error('画像デコード失敗'));img.src=src})}
-async function loadArt(){try{const [back64,front64]=await Promise.all([loadChunks(BACK_PARTS),loadChunks(FRONT_PARTS)]);BACK='data:image/webp;base64,'+back64;FRONT='data:image/webp;base64,'+front64;await Promise.all([verifyImage(BACK),verifyImage(FRONT)]);battleBtn.disabled=false;statusEl.textContent='READY - カード画像読み込み完了'}catch(e){statusEl.textContent='画像の読み込みに失敗しました。再読み込みしてください';console.error(e)}}
+async function loadArt(){try{const [back64,front64]=await Promise.all([loadChunks(BACK_PARTS),loadChunks(FRONT_PARTS)]);BACK='data:image/webp;base64,'+back64;FRONT='data:image/png;base64,'+front64;await Promise.all([verifyImage(BACK),verifyImage(FRONT)]);battleBtn.disabled=false;statusEl.textContent='READY - 高画質カード表面を読み込みました'}catch(e){statusEl.textContent='画像の読み込みに失敗しました。再読み込みしてください';console.error(e)}}
 battleBtn.onclick=()=>{menu.style.display='none';battle.style.display='grid';reset()};
 document.getElementById('backBtn').onclick=()=>{battle.style.display='none';menu.style.display='flex'};
 function reset(){hand.innerHTML='';board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';for(let i=0;i<N;i++)hand.appendChild(makeCard())}
