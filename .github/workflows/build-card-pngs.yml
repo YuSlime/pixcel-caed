@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild verified 512px front card
+      - name: Rebuild verified 512px back card
         shell: bash
         run: |
           set -euo pipefail
@@ -25,8 +25,8 @@ jobs:
           from pathlib import Path
           import base64, binascii, hashlib, re, struct
 
-          EXPECTED_SIZE = 91173
-          EXPECTED_SHA = 'c2a5927edb7df1d032372e7f5c7e0e512368b8d8bca84845d02cdf8a0a434d73'
+          EXPECTED_SIZE = 69550
+          EXPECTED_SHA = '4cd5f0e2fb071d2650ab203bb872bddca79296ff83fadb0006212b70c1f02a83'
           EXPECTED_B64_LEN = ((EXPECTED_SIZE + 2) // 3) * 4
 
           def clean(path):
@@ -58,55 +58,46 @@ jobs:
               if not seen_iend or pos != len(data):
                   raise ValueError('invalid PNG ending')
 
-          fixed = ''.join(clean(f'assets/hq_front_{i:02d}.b64') for i in range(1, 6))
-          src6 = clean('assets/hq_front_06.b64')
-          src7 = clean('assets/hq_front_07.b64')
-          suffix6 = clean('.repair/front06_suffix.txt')
-          suffix7 = clean('.repair/front07_suffix.txt')
+          part1 = clean('assets/hq_back_01.b64')
+          part2 = clean('assets/hq_back_02.b64')
+          src3 = clean('assets/hq_back_03.b64')
+          suffix3 = clean('.repair/back03_suffix.txt')
+          part4 = clean('assets/hq_back_04.b64')
+          part5 = clean('.repair/back05_full.txt')
+          part6 = clean('.repair/back06_full.txt')
 
-          keep_sum = EXPECTED_B64_LEN - len(fixed) - len(suffix6) - len(suffix7)
-          lo = max(0, keep_sum - len(src7))
-          hi = min(len(src6), keep_sum)
-          found = None
+          keep3 = EXPECTED_B64_LEN - sum(map(len, [part1, part2, suffix3, part4, part5, part6]))
+          if not 0 <= keep3 <= len(src3):
+              raise SystemExit(f'Invalid back03 splice point: {keep3}')
 
-          for keep6 in range(lo, hi + 1):
-              keep7 = keep_sum - keep6
-              text = fixed + src6[:keep6] + suffix6 + src7[:keep7] + suffix7
-              if len(text) != EXPECTED_B64_LEN:
-                  continue
-              try:
-                  data = base64.b64decode(text, validate=True)
-              except Exception:
-                  continue
-              if len(data) != EXPECTED_SIZE:
-                  continue
-              digest = hashlib.sha256(data).hexdigest()
-              if digest != EXPECTED_SHA:
-                  continue
-              validate_png(data)
-              found = (keep6, keep7, data)
-              break
+          text = part1 + part2 + src3[:keep3] + suffix3 + part4 + part5 + part6
+          if len(text) != EXPECTED_B64_LEN:
+              raise SystemExit(f'Base64 length mismatch: {len(text)} != {EXPECTED_B64_LEN}')
 
-          if found is None:
-              raise SystemExit('Could not reconstruct verified 512px front card')
+          data = base64.b64decode(text, validate=True)
+          if len(data) != EXPECTED_SIZE:
+              raise SystemExit(f'PNG size mismatch: {len(data)} != {EXPECTED_SIZE}')
+          digest = hashlib.sha256(data).hexdigest()
+          if digest != EXPECTED_SHA:
+              raise SystemExit(f'SHA256 mismatch: {digest}')
+          validate_png(data)
 
-          keep6, keep7, data = found
-          Path('assets/card_front.png').write_bytes(data)
-          print(f'card_front.png: 512x683, {len(data)} bytes')
-          print(f'SHA256: {hashlib.sha256(data).hexdigest()}')
-          print(f'Repair splice: front06={keep6}, front07={keep7}')
+          Path('assets/card_back.png').write_bytes(data)
+          print(f'card_back.png: 512x683, {len(data)} bytes')
+          print(f'SHA256: {digest}')
+          print(f'Repair splice: back03={keep3}')
           PY
 
-      - name: Commit verified 512px front card
+      - name: Commit verified 512px back card
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/card_front.png
+          git add assets/card_back.png
           if git diff --cached --quiet; then
-            echo 'Front PNG is already up to date.'
+            echo 'Back PNG is already up to date.'
             exit 0
           fi
-          git commit -m 'Upgrade front card to verified 512px PNG [skip card png build]'
+          git commit -m 'Upgrade back card to verified 512px PNG [skip card png build]'
           git push
