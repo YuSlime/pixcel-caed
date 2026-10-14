@@ -16,22 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Diagnose exact 512px back chunks
+      - name: Rebuild exact 512px back card
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, re
+          import base64, binascii, hashlib, re, struct
 
-          expected = [
-              ('ad3a671a4eee19f4e9a36a9d3232dea09aa9134975126774a6303e83697cddf4', 18000),
-              ('4719e841b360c89ec21b251b7bcfd4ce2daa5e8c49c73ad144d149170e4d541f', 18000),
-              ('ba4007865b69c0d028ceae91760bf5c55f0d88edc779a5b4d7ca0b0745c1f43c', 18000),
-              ('c3bb7b996d8df5682c5ec8f9100d06daa42936508eabc0274a4ad446d5137693', 18000),
-              ('6bef1b09e5732e85da312e5d01ebbaadf35b586c1ea83e31a837f9dd0513e03e', 18000),
-              ('cf00a8c205f158398c9ab12151dd865e9e6e6dbbcb269b6fa1303d2024d6d274', 2736),
-          ]
           paths = [
               '.repair/back01_full.txt',
               '.repair/back02_full.txt',
@@ -40,15 +32,74 @@ jobs:
               '.repair/back05_full.txt',
               '.repair/back06_full.txt',
           ]
+          expected_chunks = [
+              ('ad3a671a4eee19f4e9a36a9d3232dea09aa9134975126774a6303e83697cddf4', 18000),
+              ('4719e841b360c89ec21b251b7bcfd4ce2daa5e8c49c73ad144d149170e4d541f', 18000),
+              ('ba4007865b69c0d028ceae91760bf5c55f0d88edc779a5b4d7ca0b0745c1f43c', 18000),
+              ('c3bb7b996d8df5682c5ec8f9100d06daa42936508eabc0274a4ad446d5137693', 18000),
+              ('6bef1b09e5732e85da312e5d01ebbaadf35b586c1ea83e31a837f9dd0513e03e', 18000),
+              ('cf00a8c205f158398c9ab12151dd865e9e6e6dbbcb269b6fa1303d2024d6d274', 2736),
+          ]
 
-          bad=[]
-          for i,(path,(want_hash,want_len)) in enumerate(zip(paths,expected),1):
-              s=re.sub(r'[^A-Za-z0-9+/=]','',Path(path).read_text(encoding='utf-8'))
-              got=hashlib.sha256(s.encode()).hexdigest()
-              ok=(len(s)==want_len and got==want_hash)
-              print(f'chunk{i}: path={path} len={len(s)}/{want_len} sha256={got} expected={want_hash} match={ok}')
-              if not ok: bad.append(i)
-          if bad:
-              raise SystemExit(f'mismatched chunks: {bad}')
-          print('all chunks match exact 512px source')
+          chunks=[]
+          for i,(path,(want_hash,want_len)) in enumerate(zip(paths,expected_chunks),1):
+              text=re.sub(r'[^A-Za-z0-9+/=]','',Path(path).read_text(encoding='utf-8'))
+              got=hashlib.sha256(text.encode()).hexdigest()
+              if len(text) != want_len or got != want_hash:
+                  raise SystemExit(f'chunk {i} mismatch: len={len(text)} sha256={got}')
+              chunks.append(text)
+
+          encoded=''.join(chunks)
+          if len(encoded) != 92736:
+              raise SystemExit(f'base64 length mismatch: {len(encoded)}')
+          data=base64.b64decode(encoded, validate=True)
+          digest=hashlib.sha256(data).hexdigest()
+          if len(data) != 69550:
+              raise SystemExit(f'PNG size mismatch: {len(data)}')
+          if digest != '4cd5f0e2fb071d2650ab203bb872bddca79296ff83fadb0006212b70c1f02a83':
+              raise SystemExit(f'PNG SHA256 mismatch: {digest}')
+
+          if not data.startswith(b'\x89PNG\r\n\x1a\n'):
+              raise SystemExit('invalid PNG signature')
+          width,height=struct.unpack('>II',data[16:24])
+          if (width,height)!=(512,683):
+              raise SystemExit(f'wrong dimensions: {width}x{height}')
+
+          pos=8
+          seen_iend=False
+          while pos+12 <= len(data):
+              length=struct.unpack('>I',data[pos:pos+4])[0]
+              ctype=data[pos+4:pos+8]
+              end=pos+12+length
+              if end > len(data):
+                  raise SystemExit('truncated PNG chunk')
+              chunk=data[pos+8:pos+8+length]
+              expected_crc=struct.unpack('>I',data[pos+8+length:pos+12+length])[0]
+              actual_crc=binascii.crc32(ctype+chunk)&0xffffffff
+              if actual_crc != expected_crc:
+                  raise SystemExit(f'CRC mismatch in {ctype!r}')
+              pos=end
+              if ctype == b'IEND':
+                  seen_iend=True
+                  break
+          if not seen_iend or pos != len(data):
+              raise SystemExit('invalid PNG ending')
+
+          Path('assets/card_back.png').write_bytes(data)
+          print(f'card_back.png: {width}x{height}, {len(data)} bytes')
+          print(f'SHA256: {digest} OK')
           PY
+
+      - name: Commit verified 512px back card
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/card_back.png
+          if git diff --cached --quiet; then
+            echo 'Back PNG is already up to date.'
+            exit 0
+          fi
+          git commit -m 'Upgrade back card to verified 512px PNG'
+          git push
