@@ -1,17 +1,12 @@
 # PIXEL CARD
 
-このリポジトリをゲーム本体の更新元として使います。
+Browser card game prototype.
 
-## 使い方
-1. 最初の1回だけ、このリポジトリをPCにClone（複製）します。
-2. 以後は `UPDATE_AND_PLAY.cmd` をダブルクリックします。
-3. 最新版を自動取得してから `index.html` を開きます。
+Deployment: https://pixcel-caed.vercel.app
 
-## 現在の実装
-- BATTLEボタン
-- 手札5枚
-- カード裏面表示
-- カーソルを合わせると3D反転して表面表示
-- クリックで場に出す
+Current asset migration status:
+- HQ card back: uploaded
+- HQ card front: chunks 1-3 uploaded
+- Next: front chunks 4-7, then wire HQ assets into index.html
 
-今後の更新はこのリポジトリへ反映します。
+Development is intentionally split into small commits to avoid losing progress during long sessions.
