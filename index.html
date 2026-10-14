@@ -20,7 +20,8 @@ const STARTING_HAND=Array(N).fill(DEFAULT_CARD_ID);
 const menu=document.getElementById('menu'),battle=document.getElementById('battle'),board=document.getElementById('board'),hand=document.getElementById('hand'),msg=document.getElementById('msg'),battleBtn=document.getElementById('battleBtn'),statusEl=document.getElementById('status');
 function getCard(id){const card=CARDS.find(c=>c.id===id);if(!card)throw new Error(`Unknown card: ${id}`);return card}
 function verifyImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve();img.onerror=()=>reject(new Error(`PNG画像の読み込みに失敗: ${src}`));img.src=src})}
-async function loadArt(){try{if(!CARDS.length)throw new Error('カードデータがありません');const urls=[...new Set(CARDS.flatMap(card=>[card.front,card.back]))];await Promise.all(urls.map(verifyImage));battleBtn.disabled=false;statusEl.textContent=`READY - ${CARDS.length}種類のカードを読み込みました`}catch(e){battleBtn.disabled=false;statusEl.textContent='カードデータの読み込みに失敗しました';console.error(e)}}
+function getStartupArtUrls(){const startupCards=STARTING_HAND.map(getCard);return [...new Set(startupCards.flatMap(card=>[card.front,card.back]))]}
+async function loadArt(){try{if(!CARDS.length)throw new Error('カードデータがありません');const urls=getStartupArtUrls();await Promise.all(urls.map(verifyImage));battleBtn.disabled=false;statusEl.textContent=`READY - 必要なカード画像 ${urls.length}点を読み込みました`}catch(e){battleBtn.disabled=false;statusEl.textContent='カードデータの読み込みに失敗しました';console.error(e)}}
 battleBtn.onclick=()=>{menu.style.display='none';battle.style.display='grid';reset()};
 document.getElementById('backBtn').onclick=()=>{battle.style.display='none';menu.style.display='flex'};
 function reset(){hand.innerHTML='';board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';STARTING_HAND.forEach(id=>hand.appendChild(makeCard(getCard(id))))}
