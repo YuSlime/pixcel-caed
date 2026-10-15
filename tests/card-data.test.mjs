@@ -14,7 +14,7 @@ const cards = sandbox.window.CARDS;
 assert.ok(Array.isArray(cards), 'window.CARDS should be an array');
 assert.ok(cards.length > 0, 'at least one card should be registered');
 
-const required = ['id','name','cost','attack','defense','front','back'];
+const required = ['id','name','cost','attack','defense','rarity','front','back'];
 const ids = new Set();
 const artwork = new Set();
 
@@ -45,6 +45,7 @@ for (const card of cards) {
 
   assert.equal(typeof card.name, 'string');
   assert.ok(card.name.length > 0, `${card.id} name should not be empty`);
+  assert.match(card.rarity, /^(Common|Rare|Epic|Legendary)$/, `${card.id} rarity should be supported`);
   for (const stat of ['cost','attack','defense']) {
     assert.equal(typeof card[stat], 'number', `${card.id}.${stat} should be a number`);
     assert.ok(Number.isFinite(card[stat]) && card[stat] >= 0, `${card.id}.${stat} should be a non-negative finite number`);
@@ -62,14 +63,17 @@ assert.equal(novice.name, 'Novice Fighter');
 assert.equal(novice.cost, 2);
 assert.equal(novice.attack, 3);
 assert.equal(novice.defense, 2);
+assert.equal(novice.rarity, 'Common');
 
 const index = fs.readFileSync(new URL('index.html', repoRoot), 'utf8');
 assert.match(index, /data\/cards\.js/, 'index.html should load data/cards.js');
-assert.match(index, /window\.CARDS|\bCARDS\b/, 'index.html should use the card registry');
+assert.match(index, /data\/card-source\.js/, 'index.html should load data/card-source.js');
+assert.match(index, /window\.CARDS|LOCAL_CARDS/, 'index.html should preserve the local fallback registry');
 
 // Battle interaction regression checks.
 assert.match(index, /const\s+N\s*=\s*5\s*;/, 'starting hand size should remain 5');
-assert.match(index, /Array\(N\)\.fill\(DEFAULT_CARD_ID\)/, 'starting hand should be built from card IDs');
+assert.match(index, /CardSource\.selectBattleHand\s*\(/, 'starting hand should be selected through the card source adapter');
+assert.match(index, /startingHand\.forEach\(card=>hand\.appendChild\(makeCard\(card\)\)\)/, 'reset should render the selected card objects');
 assert.match(index, /class="face back"[^>]*><img src="\$\{card\.back\}"/, 'hand card back should use card.back');
 assert.match(index, /class="face front"[^>]*><img src="\$\{card\.front\}"/, 'hand card front should use card.front');
 assert.match(index, /\.slot:hover\s+\.inner\{transform:rotateY\(180deg\)\}/, 'hover should flip the hand card');
@@ -87,11 +91,11 @@ assert.match(index, /\.face\.front\{[^}]*transform:rotateY\(180deg\)[^}]*\}/, 'f
 assert.match(index, /\.slot:hover\s+\.face\.back\{[^}]*opacity:0[^}]*\}/, 'hover should hide the back face');
 assert.match(index, /\.slot:hover\s+\.face\.front\{[^}]*opacity:1[^}]*\}/, 'hover should reveal the front face');
 
-// Startup should only preload artwork needed by the starting hand, not every registered card.
-assert.doesNotMatch(index, /CARDS\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup should not preload the entire card registry');
-assert.match(index, /STARTING_HAND\.map\(getCard\)/, 'startup preload should resolve the starting hand cards');
-assert.match(index, /startupCards\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup preload should include both sides of needed cards');
-assert.match(index, /new Set\(startupCards\.flatMap/, 'duplicate starting-hand artwork should only be preloaded once');
+// Startup should only preload artwork needed by the selected starting hand, not every loaded card.
+assert.doesNotMatch(index, /loadedCards\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup should not preload the entire loaded card list');
+assert.match(index, /getStartupArtUrls\(startingHand\)/, 'startup preload should resolve only the selected starting hand');
+assert.match(index, /cards\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup preload should include both sides of needed cards');
+assert.match(index, /new Set\(cards\.flatMap/, 'duplicate starting-hand artwork should only be preloaded once');
 
 // 512x683 source art is intentionally rendered smaller for a crisp UI.
 assert.match(index, /\.slot\{width:120px;aspect-ratio:3\/4;/, 'desktop hand cards should render at 120px wide');
