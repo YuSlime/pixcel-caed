@@ -1,0 +1,4 @@
+# Preserve the exact bytes of the user-provided CARD MAKER files on every OS.
+data/card-maker-core.js -text
+assets/card-maker/blue-card/config.json -text whitespace=cr-at-eol
+assets/card-maker/**/*.png binary

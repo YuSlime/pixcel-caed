@@ -10,11 +10,11 @@ on:
       - 'data/card-source.js'
       - 'data/card-maker*.js'
       - 'assets/cards/**'
-      - 'tests/card-data.test.mjs'
-      - 'tests/card-manager.test.mjs'
-      - 'tests/card-source.test.mjs'
-      - 'tests/battle-source.test.mjs'
-      - 'tests/card-library.test.mjs'
+      - 'assets/card-maker/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.gitattributes'
       - '.github/workflows/test-card-data.yml'
   workflow_dispatch:
 
@@ -27,13 +27,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Validate card source adapter
-        run: node tests/card-source.test.mjs
-      - name: Validate battle source integration
-        run: node tests/battle-source.test.mjs
-      - name: Validate CARD LIBRARY
-        run: node tests/card-library.test.mjs
-      - name: Validate card registry, artwork and interactions
-        run: node tests/card-data.test.mjs
-      - name: Validate CARD MANAGER
-        run: node tests/card-manager.test.mjs
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate card data, original assets and rendering core
+        run: npm test
+      - name: Test image selection, canvas, export, upload and game interactions
+        run: npm run test:browser

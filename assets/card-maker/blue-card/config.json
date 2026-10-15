@@ -1,0 +1,82 @@
+{
+  "id": "blue-card",
+  "name": "Blue Card",
+  "calibrated": true,
+  "revision": 2,
+  "size": {
+    "width": 512,
+    "height": 682
+  },
+  "pixelArt": true,
+  "character": {
+    "x": 49.4572,
+    "y": 136.2115,
+    "width": 411.2015,
+    "height": 410.5197,
+    "fit": "cover"
+  },
+  "cardName": {
+    "x": 134.241,
+    "y": 62.2142,
+    "width": 321.7075,
+    "height": 49.0173,
+    "fontSize": 32,
+    "fontFamily": "Georgia, \"Times New Roman\", serif",
+    "fontWeight": "bold",
+    "color": "#49301d"
+  },
+  "cost": {
+    "x": 52.2833,
+    "y": 60.8003,
+    "width": 51.8123,
+    "height": 51.3739,
+    "digitHeight": 49,
+    "gap": 2
+  },
+  "attack": {
+    "x": 138.4802,
+    "y": 579.7236,
+    "width": 80.0736,
+    "height": 54.6731,
+    "digitHeight": 50,
+    "gap": 3
+  },
+  "defense": {
+    "x": 369.7516,
+    "y": 579.7236,
+    "width": 80.0736,
+    "height": 54.6731,
+    "digitHeight": 50,
+    "gap": 3
+  },
+  "sword": {
+    "x": 66.885,
+    "y": 579.7236,
+    "width": 56.0515,
+    "height": 54.6731
+  },
+  "shield": {
+    "x": 296.2723,
+    "y": 579.7236,
+    "width": 47.1021,
+    "height": 54.6731
+  },
+  "assets": {
+    "frame": "frame.png",
+    "mask": "frame-mask.png",
+    "sword": "sword.png",
+    "shield": "shield.png",
+    "digits": [
+      "digits/0.png",
+      "digits/1.png",
+      "digits/2.png",
+      "digits/3.png",
+      "digits/4.png",
+      "digits/5.png",
+      "digits/6.png",
+      "digits/7.png",
+      "digits/8.png",
+      "digits/9.png"
+    ]
+  }
+}

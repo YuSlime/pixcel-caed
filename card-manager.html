@@ -21,20 +21,19 @@
           <div class="previewLabel"><b>LIVE CARD PREVIEW</b><span class="statusPill">512 × 682 PNG</span></div>
           <div class="canvasWrap"><canvas id="cardCanvas" width="512" height="682" aria-label="生成カードプレビュー"></canvas></div>
         </div>
-        <div id="characterDrop" class="charDrop" tabindex="0">
-          <input id="characterFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-          <input id="cardFile" type="hidden" aria-hidden="true">
+        <input id="characterFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <div id="characterDrop" class="charDrop" tabindex="0" role="button" aria-label="キャラクター画像を選択">
           <img id="characterThumb" class="charThumb" alt="選択したキャラクター画像">
           <div class="uploadText"><b>CHARACTER IMAGE</b><span>クリック / ドラッグ＆ドロップで画像を選択</span></div>
         </div>
-        <div class="makerActions"><button id="savePng" class="btn secondary" type="button">SAVE PNG</button><button id="clearCharacter" class="btn secondary" type="button">画像を解除</button></div>
+        <div class="makerActions"><button id="savePng" class="btn secondary" type="button" disabled>SAVE PNG</button><button id="clearCharacter" class="btn secondary" type="button">画像を解除</button></div>
         <div class="hint">画像は中央を基準にカード枠へ自動フィットします。カード生成処理はブラウザ内だけで行われます。</div>
       </section>
 
       <section class="form">
         <div class="sectionTitle">CARD DATA</div>
         <div class="field"><label>CARD ID</label><input id="cardId" maxlength="80" placeholder="例: blue-slime"></div>
-        <div class="field"><label>NAME</label><input id="cardName" maxlength="80" placeholder="例: Blue Slime"></div>
+        <div class="field"><label>NAME</label><input id="cardName" maxlength="80" placeholder="例: Blue Slime"><span class="hint">ZIP版と同じく、英数字・スペース・_・-を使用できます。</span></div>
         <div class="stats">
           <div class="field"><label>COST</label><input id="cost" type="number" min="0" max="99" value="1"></div>
           <div class="field"><label>ATK</label><input id="attack" type="number" min="0" max="99" value="1"></div>
@@ -44,87 +43,15 @@
 
         <div class="sectionTitle">SUPABASE ADMIN</div>
         <div class="field"><label>ADMIN KEY</label><div class="admin"><input id="adminKey" type="password" autocomplete="off" placeholder="管理キー"><button id="forgetKey" class="btn secondary" type="button">忘れる</button></div></div>
-        <button id="saveCard" class="btn save" type="button">GENERATE & ADD CARD</button>
-        <div id="msg" class="msg"></div>
+        <button id="saveCard" class="btn save" type="button" disabled>GENERATE & ADD CARD</button>
+        <div id="msg" class="msg" role="status" aria-live="polite"></div>
         <div id="result" class="result"></div>
         <div class="hint">GENERATE & ADD CARDを押すと、今見えている完成カードをPNG化してSupabase Storageへ登録し、COST / ATK / DEFなどをDatabaseへ保存します。再デプロイは不要です。</div>
       </section>
     </div>
   </div>
 </div>
-<script>
-const API='https://zwhuhyeltbbggvikclou.supabase.co/functions/v1/card-admin';
-const canvas=document.getElementById('cardCanvas'),ctx=canvas.getContext('2d');
-const characterDrop=document.getElementById('characterDrop'),characterFile=document.getElementById('characterFile'),characterThumb=document.getElementById('characterThumb');
-const adminKey=document.getElementById('adminKey'),cardId=document.getElementById('cardId'),cardName=document.getElementById('cardName');
-const cost=document.getElementById('cost'),attack=document.getElementById('attack'),defense=document.getElementById('defense'),rarity=document.getElementById('rarity');
-const saveCard=document.getElementById('saveCard'),savePng=document.getElementById('savePng'),msg=document.getElementById('msg'),result=document.getElementById('result');
-let characterImage=null,characterUrl='';
-adminKey.value=localStorage.getItem('pixelCardAdminKey')||'';
-
-function slugify(v){return v.trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)}
-function clampStat(v){const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(99,Math.trunc(n))):0}
-function show(t,err=false,ok=false){msg.textContent=t;msg.className='msg'+(err?' err':ok?' ok':'')}
-function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
-function coverRect(sw,sh,x,y,w,h){const scale=Math.max(w/sw,h/sh),cw=w/scale,ch=h/scale;return[(sw-cw)/2,(sh-ch)/2,cw,ch,x,y,w,h]}
-
-function drawSword(x,y){ctx.save();ctx.translate(x,y);ctx.rotate(-Math.PI/4);ctx.fillStyle='#d9edff';ctx.strokeStyle='#06162c';ctx.lineWidth=5;ctx.fillRect(-5,-28,10,39);ctx.strokeRect(-5,-28,10,39);ctx.fillStyle='#7aa9e7';ctx.fillRect(0,-28,5,39);ctx.fillStyle='#d7a24b';ctx.fillRect(-12,10,24,7);ctx.strokeRect(-12,10,24,7);ctx.fillStyle='#7a421c';ctx.fillRect(-4,17,8,15);ctx.strokeRect(-4,17,8,15);ctx.restore()}
-function drawShield(x,y){ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(18,-15);ctx.lineTo(15,11);ctx.quadraticCurveTo(0,29,-15,11);ctx.lineTo(-18,-15);ctx.closePath();ctx.fillStyle='#cfe3ff';ctx.strokeStyle='#06162c';ctx.lineWidth=5;ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(11,-12);ctx.lineTo(9,8);ctx.quadraticCurveTo(0,18,0,18);ctx.closePath();ctx.fillStyle='#78a9ea';ctx.fill();ctx.restore()}
-function drawValue(value,x,y){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 48px Arial Black,Arial,sans-serif';ctx.lineJoin='round';ctx.lineWidth=7;ctx.strokeStyle='#2d1d0e';ctx.fillStyle='#ffe6ad';ctx.strokeText(String(clampStat(value)),x,y);ctx.fillText(String(clampStat(value)),x,y);ctx.restore()}
-
-function drawBlueCardFrame(){
-  ctx.save();
-  ctx.lineJoin='round';
-  rr(18,12,476,658,28);ctx.fillStyle='#e8edf3';ctx.fill();ctx.strokeStyle='#141a21';ctx.lineWidth=7;ctx.stroke();
-  rr(27,24,458,634,20);ctx.strokeStyle='#7d8792';ctx.lineWidth=5;ctx.stroke();
-  rr(38,123,436,431,15);ctx.strokeStyle='#04152a';ctx.lineWidth=10;ctx.stroke();ctx.strokeStyle='#087dff';ctx.lineWidth=5;ctx.stroke();
-  rr(133,57,337,61,13);ctx.fillStyle='#ffe0a8';ctx.fill();ctx.strokeStyle='#a76528';ctx.lineWidth=5;ctx.stroke();
-  ctx.beginPath();ctx.arc(78,84,50,0,Math.PI*2);ctx.fillStyle='#eef2f6';ctx.fill();ctx.strokeStyle='#151a21';ctx.lineWidth=7;ctx.stroke();ctx.beginPath();ctx.arc(78,84,38,0,Math.PI*2);ctx.fillStyle='#075ee7';ctx.fill();ctx.strokeStyle='#0798ff';ctx.lineWidth=5;ctx.stroke();
-  rr(38,566,216,79,14);ctx.fillStyle='#0867d9';ctx.fill();ctx.strokeStyle='#06162c';ctx.lineWidth=7;ctx.stroke();
-  rr(258,566,216,79,14);ctx.fillStyle='#0867d9';ctx.fill();ctx.strokeStyle='#06162c';ctx.lineWidth=7;ctx.stroke();
-  drawSword(92,606);drawShield(320,606);
-  ctx.restore();
-}
-
-function renderCard(){
-  ctx.clearRect(0,0,512,682);
-  ctx.save();rr(43,130,426,418,9);ctx.clip();ctx.fillStyle='#08284b';ctx.fillRect(43,130,426,418);
-  if(characterImage){const a=coverRect(characterImage.naturalWidth,characterImage.naturalHeight,49,136,412,411);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(characterImage,...a)}
-  ctx.restore();
-  drawBlueCardFrame();
-  const name=(cardName.value.trim()||'CARD NAME').slice(0,80);ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#49301d';let size=32;ctx.font=`900 ${size}px Georgia,serif`;while(ctx.measureText(name).width>310&&size>14){size--;ctx.font=`900 ${size}px Georgia,serif`}ctx.fillText(name,301,87,310);ctx.restore();
-  drawValue(cost.value,78,84);drawValue(attack.value,179,608);drawValue(defense.value,410,608);
-}
-
-async function chooseCharacter(file){
-  if(!file)return;if(!file.type.startsWith('image/'))return show('画像ファイルを選択してください',true);if(file.size>8*1024*1024)return show('画像は8MB以下にしてください',true);
-  if(characterUrl)URL.revokeObjectURL(characterUrl);characterUrl=URL.createObjectURL(file);const img=new Image();img.onload=()=>{characterImage=img;characterThumb.src=characterUrl;characterDrop.classList.add('has');renderCard();show('キャラクター画像を読み込みました')};img.onerror=()=>show('画像を読み込めませんでした',true);img.src=characterUrl;
-}
-function canvasFile(id){return new Promise((resolve,reject)=>{canvas.toBlob(blob=>{if(!blob)return reject(new Error('PNG生成に失敗しました'));resolve(new File([blob],`${id||'card'}.png`,{type:'image/png'}))},'image/png')})}
-
-characterDrop.onclick=()=>characterFile.click();characterDrop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();characterFile.click()}};characterFile.onchange=()=>chooseCharacter(characterFile.files[0]);
-for(const ev of ['dragenter','dragover'])characterDrop.addEventListener(ev,e=>{e.preventDefault();characterDrop.classList.add('drag')});
-for(const ev of ['dragleave','drop'])characterDrop.addEventListener(ev,e=>{e.preventDefault();characterDrop.classList.remove('drag')});
-characterDrop.addEventListener('drop',e=>chooseCharacter(e.dataTransfer.files[0]));window.addEventListener('dragover',e=>{if(e.dataTransfer?.types?.includes('Files'))e.preventDefault()});window.addEventListener('drop',e=>{if(e.dataTransfer?.types?.includes('Files'))e.preventDefault()});
-cardName.addEventListener('input',()=>{if(!cardId.dataset.manual)cardId.value=slugify(cardName.value);renderCard()});cardId.addEventListener('input',()=>cardId.dataset.manual='1');
-[cost,attack,defense].forEach(el=>el.addEventListener('input',renderCard));
-document.getElementById('clearCharacter').onclick=()=>{characterImage=null;if(characterUrl)URL.revokeObjectURL(characterUrl);characterUrl='';characterFile.value='';characterDrop.classList.remove('has');characterThumb.removeAttribute('src');renderCard();show('画像を解除しました')};
-document.getElementById('forgetKey').onclick=()=>{localStorage.removeItem('pixelCardAdminKey');adminKey.value='';show('保存した管理キーを削除しました')};
-
-savePng.onclick=async()=>{if(!characterImage)return show('先にキャラクター画像を選択してください',true);renderCard();const file=await canvasFile(slugify(cardId.value)||slugify(cardName.value)||'card');const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=(slugify(cardId.value)||'card')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);show('PNGを保存しました',false,true)};
-
-saveCard.onclick=async()=>{
-  result.classList.remove('show');const key=adminKey.value.trim();const id=slugify(cardId.value);const name=cardName.value.trim();
-  if(!key)return show('ADMIN KEYを入力してください',true);if(!characterImage)return show('キャラクター画像を選択してください',true);if(!id)return show('CARD IDを入力してください',true);if(!name)return show('NAMEを入力してください',true);
-  renderCard();saveCard.disabled=true;show('完成カードを生成してSupabaseへ追加中...');
-  try{
-    const generatedFile=await canvasFile(id);const form=new FormData();form.append('file',generatedFile);form.append('id',id);form.append('name',name);form.append('cost',String(clampStat(cost.value)));form.append('attack',String(clampStat(attack.value)));form.append('defense',String(clampStat(defense.value)));form.append('rarity',rarity.value);
-    const res=await fetch(API,{method:'POST',headers:{'x-admin-key':key},body:form});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
-    localStorage.setItem('pixelCardAdminKey',key);show(`${data.card.name} を追加しました`,false,true);result.replaceChildren();const b=document.createElement('b');b.textContent=data.card.name;const br=document.createElement('br');const text=document.createTextNode(`ID: ${data.card.id} `);const link=document.createElement('a');link.href=data.card.image_url;link.target='_blank';link.rel='noopener';link.textContent='登録画像を確認';result.append(b,br,text,link);result.classList.add('show');
-    characterImage=null;if(characterUrl)URL.revokeObjectURL(characterUrl);characterUrl='';characterFile.value='';characterDrop.classList.remove('has');characterThumb.removeAttribute('src');cardName.value='';cardId.value='';delete cardId.dataset.manual;cost.value='1';attack.value='1';defense.value='1';rarity.value='Common';renderCard();
-  }catch(e){show(e.message||String(e),true)}finally{saveCard.disabled=false}
-};
-renderCard();
-</script>
+<script src="./data/card-maker-core.js"></script>
+<script src="./data/card-maker-manager.js"></script>
 </body>
 </html>
