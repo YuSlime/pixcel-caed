@@ -2,14 +2,18 @@ name: Test card data
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/supabase-card-source"]
     paths:
       - 'index.html'
       - 'card-manager.html'
       - 'data/cards.js'
+      - 'data/card-source.js'
       - 'assets/cards/**'
       - 'tests/card-data.test.mjs'
       - 'tests/card-manager.test.mjs'
+      - 'tests/card-source.test.mjs'
+      - 'tests/battle-source.test.mjs'
+      - 'tests/card-library.test.mjs'
       - '.github/workflows/test-card-data.yml'
   workflow_dispatch:
 
@@ -22,6 +26,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate card source adapter
+        run: node tests/card-source.test.mjs
+      - name: Validate battle source integration
+        run: node tests/battle-source.test.mjs
+      - name: Validate CARD LIBRARY
+        run: node tests/card-library.test.mjs
       - name: Validate card registry, artwork and interactions
         run: node tests/card-data.test.mjs
       - name: Validate CARD MANAGER
