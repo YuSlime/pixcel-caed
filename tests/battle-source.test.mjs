@@ -15,7 +15,8 @@ assert.match(index, /let\s+startingHand\s*=/, 'startup should keep a stable star
 assert.match(index, /CardSource\.selectBattleHand\s*\(/, 'battle hand should come from CardSource.selectBattleHand');
 assert.doesNotMatch(index, /Array\(N\)\.fill\(DEFAULT_CARD_ID\)/, 'battle hand should not be hard-coded to local IDs');
 assert.match(index, /startingHand\.forEach\(card=>hand\.appendChild\(makeCard\(card\)\)\)/, 'reset should render the selected card objects without refetching');
-assert.match(index, /getStartupArtUrls\(startingHand\)/, 'startup should preload only the selected hand');
+assert.match(index, /preloadHand\(startingHand\)/, 'startup should preload only the selected hand');
+assert.match(index, /getStartupArtUrls\(cards\)/, 'preload helper should derive artwork from the cards passed to it');
 assert.match(index, /new Set\(cards\.flatMap\(card=>\[card\.front,card\.back\]\)\)/, 'startup art should deduplicate selected fronts and shared back');
 assert.match(index, /startingHand\s*=\s*CardSource\.selectBattleHand\(\[\],\s*'local',\s*LOCAL_CARDS,\s*N\)/, 'remote artwork failure should replace the whole hand with local fallback cards');
 assert.match(index, /READY - \$\{cardResult\.remoteCount\} CARDS LOADED/, 'remote success status should report card count');
