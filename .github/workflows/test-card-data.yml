@@ -8,6 +8,7 @@ on:
       - 'data/cards.js'
       - 'data/decks.js'
       - 'assets/cards/**'
+      - '.card-import/READY'
       - 'tests/card-data.test.mjs'
       - 'tests/card-assets.test.mjs'
       - 'tests/deck-data.test.mjs'
@@ -16,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -24,6 +25,55 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Rebuild pending card PNGs
+        if: github.ref == 'refs/heads/feature/card-library-deck' && hashFiles('.card-import/READY') != ''
+        shell: python
+        run: |
+          import base64
+          import pathlib
+          import struct
+
+          mapping = {
+              'pebblout': pathlib.Path('assets/cards/pebblout/front.png'),
+              'flutterpuff': pathlib.Path('assets/cards/flutterpuff/front.png'),
+              'pip-bat': pathlib.Path('assets/cards/pip-bat/front.png'),
+              'wispy': pathlib.Path('assets/cards/wispy/front.png'),
+              'slime': pathlib.Path('assets/cards/slime/front.png'),
+          }
+
+          rebuilt = 0
+          for card_id, output in mapping.items():
+              chunk_dir = pathlib.Path('.card-import') / card_id
+              chunks = sorted(p for p in chunk_dir.glob('*.txt') if p.stem.isdigit() and len(p.stem) == 3)
+              if not chunks:
+                  continue
+              encoded = ''.join(p.read_text().strip() for p in chunks)
+              data = base64.b64decode(encoded, validate=True)
+              if data[:8] != b'\x89PNG\r\n\x1a\n':
+                  raise SystemExit(f'{card_id}: not a PNG')
+              width, height = struct.unpack('>II', data[16:24])
+              if width != 512 or height not in (682, 683):
+                  raise SystemExit(f'{card_id}: unexpected dimensions {width}x{height}')
+              output.parent.mkdir(parents=True, exist_ok=True)
+              output.write_bytes(data)
+              rebuilt += 1
+              print(card_id, len(data), f'{width}x{height}')
+
+          if rebuilt == 0:
+              raise SystemExit('No canonical card chunks found')
+
+      - name: Commit rebuilt card PNGs
+        if: github.ref == 'refs/heads/feature/card-library-deck' && hashFiles('.card-import/READY') != ''
+        shell: bash
+        run: |
+          rm -rf .card-import
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/cards .card-import || true
+          git commit -m "Build starter card PNG assets"
+          git push
+
       - name: Validate existing card interactions
         run: node tests/card-data.test.mjs
       - name: Validate starter card assets
