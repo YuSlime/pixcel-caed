@@ -33,12 +33,12 @@ assert.equal(typeof loadCards, 'function', 'loadCards should be exposed');
 assert.equal(typeof selectBattleHand, 'function', 'selectBattleHand should be exposed');
 
 const validRows = [
-  { id: 'a', name: 'Alpha', cost: 1, attack: 2, defense: 3, rarity: 'Common', image_url: 'https://example.test/a.png', enabled: true, created_at: '2026-01-01T00:00:00Z' },
-  { id: 'b', name: 'Beta', cost: 2, attack: 3, defense: 4, rarity: 'Rare', image_url: 'https://example.test/b.png', enabled: true, created_at: '2026-01-02T00:00:00Z' },
+  { id: 'a', name: 'Alpha', cost: 1, attack: 2, defense: 3, rarity: 'Common', image_path: 'a/a.png', enabled: true, created_at: '2026-01-01T00:00:00Z' },
+  { id: 'b', name: 'Beta', cost: 2, attack: 3, defense: 4, rarity: 'Rare', image_path: 'b/b.png', enabled: true, created_at: '2026-01-02T00:00:00Z' },
 ];
 const normalized = normalizeRemoteRows(validRows);
 assert.deepEqual(Array.from(normalized, c => c.id), ['a', 'b'], 'valid rows should preserve API order');
-assert.equal(normalized[0].front, 'https://example.test/a.png');
+assert.equal(normalized[0].front, 'https://zwhuhyeltbbggvikclou.supabase.co/storage/v1/object/public/card-art/a/a.png');
 assert.equal(normalized[0].back, './assets/cards/shared/back.png?v=1');
 assert.equal(normalized[0].rarity, 'Common');
 
@@ -47,7 +47,7 @@ const mixedRows = [
   { ...validRows[0], name: 'Duplicate later' },
   { ...validRows[1], id: '', name: 'Empty ID' },
   { ...validRows[1], id: 'empty-name', name: '   ' },
-  { ...validRows[1], id: 'empty-image', image_url: '' },
+  { ...validRows[1], id: 'empty-image', image_path: '' },
   { ...validRows[1], id: 'missing-created-at', created_at: '' },
   { ...validRows[1], id: 'bad-rarity', rarity: 'Mythic' },
   { ...validRows[1], id: 'disabled', enabled: false },
@@ -77,6 +77,8 @@ assert.deepEqual(Array.from(remoteResult.cards, c => c.id), ['a', 'b']);
 assert.equal(remoteResult.error, null);
 assert.match(requestedUrl, /\/rest\/v1\/cards\?/);
 assert.match(requestedUrl, /enabled=eq\.true/);
+assert.match(requestedUrl, /image_path/, 'remote query should select the stored image_path column');
+assert.doesNotMatch(requestedUrl, /image_url/, 'remote query must not request a missing image_url column');
 assert.match(requestedUrl, /order=created_at\.asc,id\.asc/, 'remote ordering should be deterministic by created_at then id');
 assert.ok(requestedOptions?.headers?.apikey?.startsWith('sb_publishable_'), 'request should use a publishable apikey');
 
