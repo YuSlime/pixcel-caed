@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate card manager
+        run: node tests/card-manager.test.mjs
       - name: Validate existing card interactions
         run: node tests/card-data.test.mjs
       - name: Validate starter card assets
@@ -33,5 +35,3 @@ jobs:
         run: test ! -f tests/deck-data.test.mjs || node tests/deck-data.test.mjs
       - name: Validate card library when present
         run: test ! -f tests/card-library.test.mjs || node tests/card-library.test.mjs
-      - name: Validate card manager
-        run: node tests/card-manager.test.mjs
