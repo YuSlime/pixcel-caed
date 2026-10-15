@@ -93,7 +93,8 @@ assert.match(index, /\.slot:hover\s+\.face\.front\{[^}]*opacity:1[^}]*\}/, 'hove
 
 // Startup should only preload artwork needed by the selected starting hand, not every loaded card.
 assert.doesNotMatch(index, /loadedCards\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup should not preload the entire loaded card list');
-assert.match(index, /getStartupArtUrls\(startingHand\)/, 'startup preload should resolve only the selected starting hand');
+assert.match(index, /preloadHand\(startingHand\)/, 'startup preload should resolve only the selected starting hand');
+assert.match(index, /getStartupArtUrls\(cards\)/, 'preload helper should derive artwork from the cards passed to it');
 assert.match(index, /cards\.flatMap\(card=>\[card\.front,card\.back\]\)/, 'startup preload should include both sides of needed cards');
 assert.match(index, /new Set\(cards\.flatMap/, 'duplicate starting-hand artwork should only be preloaded once');
 
