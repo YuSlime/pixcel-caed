@@ -48,6 +48,7 @@ const mixedRows = [
   { ...validRows[1], id: '', name: 'Empty ID' },
   { ...validRows[1], id: 'empty-name', name: '   ' },
   { ...validRows[1], id: 'empty-image', image_url: '' },
+  { ...validRows[1], id: 'missing-created-at', created_at: '' },
   { ...validRows[1], id: 'bad-rarity', rarity: 'Mythic' },
   { ...validRows[1], id: 'disabled', enabled: false },
   { ...validRows[1], id: 'negative', cost: -1 },
@@ -76,7 +77,7 @@ assert.deepEqual(Array.from(remoteResult.cards, c => c.id), ['a', 'b']);
 assert.equal(remoteResult.error, null);
 assert.match(requestedUrl, /\/rest\/v1\/cards\?/);
 assert.match(requestedUrl, /enabled=eq\.true/);
-assert.match(requestedUrl, /order=created_at\.asc/);
+assert.match(requestedUrl, /order=created_at\.asc,id\.asc/, 'remote ordering should be deterministic by created_at then id');
 assert.ok(requestedOptions?.headers?.apikey?.startsWith('sb_publishable_'), 'request should use a publishable apikey');
 
 for (const [label, fetchImpl] of [
