@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIXEL CARD - CARD MANAGER</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:#050b12;color:#fff}body{padding:32px 16px;background:radial-gradient(circle at top,#173d68 0,#0a1b2e 35%,#050b12 75%)}.wrap{width:min(980px,100%);margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.title{margin:0;font-size:clamp(24px,5vw,42px);letter-spacing:3px}.sub{color:#8fb3d6;font-size:13px}.card{background:#071321ed;border:1px solid #315a80;border-radius:18px;box-shadow:0 18px 55px #0008;padding:20px}.grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(280px,1fr);gap:22px}.drop{min-height:410px;border:2px dashed #487ca8;border-radius:16px;background:#0a1c2d;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;cursor:pointer;position:relative;overflow:hidden;transition:.15s}.drop.drag{border-color:#60b9ff;background:#0f2c46}.drop img{max-width:100%;max-height:390px;object-fit:contain;display:none}.drop.has img{display:block}.drop.has .dropText{display:none}.dropText b{display:block;font-size:18px;margin-bottom:8px}.dropText span{color:#86a7c5;font-size:13px}.form{display:grid;gap:13px}.field{display:grid;gap:6px}.field label{font-size:12px;color:#94b6d6;font-weight:700;letter-spacing:.5px}.field input,.field select{width:100%;border:1px solid #315a80;border-radius:10px;background:#091929;color:#fff;padding:12px 13px;outline:none}.field input:focus,.field select:focus{border-color:#59aef6}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.admin{display:grid;grid-template-columns:1fr auto;gap:8px}.btn{border:0;border-radius:11px;padding:13px 16px;color:#fff;font-weight:900;cursor:pointer;background:linear-gradient(#40a7ff,#1163ba);box-shadow:0 5px 0 #093c72}.btn:disabled{opacity:.45;cursor:wait}.secondary{background:#12263a;box-shadow:none;border:1px solid #365d86}.msg{min-height:22px;margin-top:12px;font-size:13px;color:#9fc5e8}.msg.ok{color:#74e49b}.msg.err{color:#ff8585}.hint{margin-top:14px;font-size:12px;color:#6988a6;line-height:1.6}.result{display:none;margin-top:18px;padding:14px;border:1px solid #2b7250;background:#0b261c;border-radius:12px}.result.show{display:block}.result a{color:#76c7ff}.back{color:#8fc5ef;text-decoration:none}@media(max-width:760px){body{padding:18px 10px}.grid{grid-template-columns:1fr}.drop{min-height:320px}.stats{grid-template-columns:repeat(3,1fr)}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1 class="title">CARD MANAGER</h1><div class="sub">PNGを選択 → 数値入力 → ADD CARD だけで追加</div></div>
+    <a class="back" href="./">← GAME</a>
+  </div>
+  <div class="card">
+    <div class="grid">
+      <div id="dropZone" class="drop" tabindex="0">
+        <input id="cardFile" type="file" accept="image/png,image/webp" hidden>
+        <div class="dropText"><b>カード画像をドロップ</b><span>またはクリックしてPNG / WebPを選択<br>最大5MB</span></div>
+        <img id="preview" alt="カードプレビュー">
+      </div>
+      <div class="form">
+        <div class="field"><label>ADMIN KEY</label><div class="admin"><input id="adminKey" type="password" autocomplete="off" placeholder="管理キー"><button id="forgetKey" class="btn secondary" type="button">忘れる</button></div></div>
+        <div class="field"><label>CARD ID</label><input id="cardId" maxlength="80" placeholder="例: blue-slime"></div>
+        <div class="field"><label>NAME</label><input id="cardName" maxlength="80" placeholder="例: Blue Slime"></div>
+        <div class="stats">
+          <div class="field"><label>COST</label><input id="cost" type="number" min="0" max="99" value="1"></div>
+          <div class="field"><label>ATK</label><input id="attack" type="number" min="0" max="99" value="1"></div>
+          <div class="field"><label>DEF</label><input id="defense" type="number" min="0" max="99" value="1"></div>
+        </div>
+        <div class="field"><label>RARITY</label><select id="rarity"><option>Common</option><option>Rare</option><option>Epic</option><option>Legendary</option></select></div>
+        <button id="saveCard" class="btn" type="button">ADD CARD</button>
+        <div id="msg" class="msg"></div>
+        <div id="result" class="result"></div>
+        <div class="hint">管理キーはGitHubには保存されません。このブラウザの localStorage にだけ保存されます。カード画像はSupabase Storage、数値はSupabase Databaseへ直接登録されるため、追加ごとの再デプロイは不要です。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const API='https://zwhuhyeltbbggvikclou.supabase.co/functions/v1/card-admin';
+const dropZone=document.getElementById('dropZone'),cardFile=document.getElementById('cardFile'),preview=document.getElementById('preview');
+const adminKey=document.getElementById('adminKey'),cardId=document.getElementById('cardId'),cardName=document.getElementById('cardName');
+const cost=document.getElementById('cost'),attack=document.getElementById('attack'),defense=document.getElementById('defense'),rarity=document.getElementById('rarity');
+const saveCard=document.getElementById('saveCard'),msg=document.getElementById('msg'),result=document.getElementById('result');
+let file=null;
+adminKey.value=localStorage.getItem('pixelCardAdminKey')||'';
+function slugify(v){return v.trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)}
+function setFile(f){if(!f)return;if(!['image/png','image/webp'].includes(f.type)){show('PNGかWebPを選択してください',true);return}if(f.size>5*1024*1024){show('画像は5MB以下にしてください',true);return}file=f;preview.src=URL.createObjectURL(f);dropZone.classList.add('has');show('画像を読み込みました');}
+function show(t,err=false,ok=false){msg.textContent=t;msg.className='msg'+(err?' err':ok?' ok':'')}
+dropZone.onclick=()=>cardFile.click();dropZone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cardFile.click()}};cardFile.onchange=()=>setFile(cardFile.files[0]);
+for(const ev of ['dragenter','dragover'])dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.add('drag')});
+for(const ev of ['dragleave','drop'])dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.remove('drag')});
+dropZone.addEventListener('drop',e=>setFile(e.dataTransfer.files[0]));
+cardName.addEventListener('input',()=>{if(!cardId.dataset.manual)cardId.value=slugify(cardName.value)});cardId.addEventListener('input',()=>cardId.dataset.manual='1');
+document.getElementById('forgetKey').onclick=()=>{localStorage.removeItem('pixelCardAdminKey');adminKey.value='';show('保存した管理キーを削除しました')};
+saveCard.onclick=async()=>{
+  result.classList.remove('show');
+  const key=adminKey.value.trim();const id=slugify(cardId.value);const name=cardName.value.trim();
+  if(!key)return show('ADMIN KEYを入力してください',true);if(!file)return show('カード画像を選択してください',true);if(!id)return show('CARD IDを入力してください',true);if(!name)return show('NAMEを入力してください',true);
+  const form=new FormData();form.append('file',file);form.append('id',id);form.append('name',name);form.append('cost',cost.value);form.append('attack',attack.value);form.append('defense',defense.value);form.append('rarity',rarity.value);
+  saveCard.disabled=true;show('Supabaseへ追加中...');
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'x-admin-key':key},body:form});const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
+    localStorage.setItem('pixelCardAdminKey',key);show(`${data.card.name} を追加しました`,false,true);result.innerHTML=`<b>${data.card.name}</b><br>ID: ${data.card.id}<br><a href="${data.card.image_url}" target="_blank" rel="noopener">登録画像を確認</a>`;result.classList.add('show');
+    file=null;cardFile.value='';preview.removeAttribute('src');dropZone.classList.remove('has');cardName.value='';cardId.value='';delete cardId.dataset.manual;cost.value='1';attack.value='1';defense.value='1';rarity.value='Common';
+  }catch(e){show(e.message||String(e),true)}finally{saveCard.disabled=false}
+};
+</script>
+</body>
+</html>
