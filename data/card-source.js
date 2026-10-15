@@ -4,7 +4,7 @@
   const SHARED_BACK = './assets/cards/shared/back.png?v=1';
   const RARITIES = new Set(['Common', 'Rare', 'Epic', 'Legendary']);
   const SELECT_FIELDS = 'id,name,cost,attack,defense,rarity,image_url,enabled,created_at';
-  const CARDS_URL = `${PROJECT_URL}/rest/v1/cards?select=${SELECT_FIELDS}&enabled=eq.true&order=created_at.asc`;
+  const CARDS_URL = `${PROJECT_URL}/rest/v1/cards?select=${SELECT_FIELDS}&enabled=eq.true&order=created_at.asc,id.asc`;
 
   function cleanString(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -27,8 +27,9 @@
       const name = cleanString(row.name);
       const front = cleanString(row.image_url);
       const rarity = cleanString(row.rarity);
+      const createdAt = cleanString(row.created_at);
 
-      if (!id || !name || !front || !RARITIES.has(rarity)) continue;
+      if (!id || !name || !front || !createdAt || !RARITIES.has(rarity)) continue;
       if (!validStat(row.cost) || !validStat(row.attack) || !validStat(row.defense)) continue;
       if (seen.has(id)) continue;
 
