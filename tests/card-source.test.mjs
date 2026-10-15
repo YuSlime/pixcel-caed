@@ -76,10 +76,11 @@ assert.equal(remoteResult.remoteCount, 2);
 assert.deepEqual(Array.from(remoteResult.cards, c => c.id), ['a', 'b']);
 assert.equal(remoteResult.error, null);
 assert.match(requestedUrl, /\/rest\/v1\/cards\?/);
-assert.match(requestedUrl, /enabled=eq\.true/);
+assert.match(requestedUrl, /deleted_at=is\.null/);
 assert.match(requestedUrl, /image_path/, 'remote query should select the stored image_path column');
 assert.doesNotMatch(requestedUrl, /image_url/, 'remote query must not request a missing image_url column');
-assert.match(requestedUrl, /order=created_at\.asc,id\.asc/, 'remote ordering should be deterministic by created_at then id');
+assert.match(requestedUrl, /order=card_number\.asc,created_at\.asc,id\.asc/, 'remote ordering should follow card number with deterministic tie breaks');
+assert.match(requestedUrl, /card_variants\(internal_id/, 'public feed includes variant identity and availability');
 assert.ok(requestedOptions?.headers?.apikey?.startsWith('sb_publishable_'), 'request should use a publishable apikey');
 
 for (const [label, fetchImpl] of [
@@ -98,7 +99,7 @@ for (const [label, fetchImpl] of [
 const fiveRemote = Array.from({ length: 6 }, (_, i) => ({ ...normalized[0], id: `r${i + 1}` }));
 assert.deepEqual(Array.from(selectBattleHand(fiveRemote, 'remote', localCards, 5), c => c.id), ['r1', 'r2', 'r3', 'r4', 'r5'], 'first five remote cards should form the hand');
 
-for (const count of [0, 1, 4]) {
+for (const count of [1, 4]) {
   const shortRemote = fiveRemote.slice(0, count);
   const hand = selectBattleHand(shortRemote, 'remote', localCards, 5);
   assert.equal(hand.length, 5, `${count} remote cards should still yield five local battle cards`);
@@ -107,5 +108,39 @@ for (const count of [0, 1, 4]) {
 
 const localHand = selectBattleHand(localCards, 'local', localCards, 5);
 assert.deepEqual(Array.from(localHand, c => c.id), Array(5).fill('novice-fighter'), 'local source should use Novice Fighter x5');
+
+// A slug/number rename must not transfer gameplay identity or ownership.
+const modernRow = { ...validRows[0], id: 'renamable-slug', internal_id: 'parent-uuid', card_number: 3, card_variants: [
+  { internal_id: 'base-uuid', card_internal_id: 'parent-uuid', variant_number: 1, variant_name: '通常', rendered_image_path: 'base.png', enabled: true },
+  { internal_id: 'alt-uuid', card_internal_id: 'parent-uuid', variant_number: 2, variant_name: '限定', rendered_image_path: 'alt.png', enabled: true },
+] };
+const playerStorage = new Map();
+sandbox.window.localStorage = { getItem: key => playerStorage.get(key), setItem: (key, value) => playerStorage.set(key, value) };
+vm.runInNewContext(fs.readFileSync(new URL('../data/player-variants.js', import.meta.url), 'utf8'), sandbox);
+const player = sandbox.window.PlayerVariants;
+let modernCards = normalizeRemoteRows([modernRow]);
+assert.equal(modernCards[0].id, 'parent-uuid', 'immutable parent UUID is gameplay identity');
+assert.equal(modernCards[0].playable, false, 'visible unowned cards must be locked');
+assert.equal(selectBattleHand(modernCards, 'remote', localCards).length, 0, 'unowned cards must not produce offline playable filler');
+player.acquire([{ variant_internal_id: 'base-uuid', card_internal_id: 'parent-uuid', variant_number: 1 }, { variant_internal_id: 'alt-uuid', card_internal_id: 'parent-uuid', variant_number: 2 }]);
+player.select('parent-uuid', 'alt-uuid');
+modernCards = normalizeRemoteRows([{ ...modernRow, id: 'new-slug', card_number: 1 }]);
+assert.equal(modernCards[0].id, 'parent-uuid');
+assert.ok(modernCards[0].front.endsWith('/alt.png'), 'owned selected artwork is used');
+assert.equal(modernCards[0].attack, 2, 'variant selection inherits parent stats');
+assert.equal(normalizeRemoteRows([{ ...modernRow, enabled: false }])[0].playable, true, 'modern V1 enabled is authoritative over the legacy parent flag');
+const hiddenAlt = { ...modernRow, card_variants: modernRow.card_variants.map(v => ({ ...v, enabled: v.variant_number === 1 })) };
+assert.ok(normalizeRemoteRows([hiddenAlt])[0].front.endsWith('/base.png'), 'unavailable selected variant falls back to V1');
+assert.equal(player.selected('parent-uuid'), 'alt-uuid', 'unavailable selection is retained');
+const hiddenBase = { ...modernRow, card_variants: modernRow.card_variants.map(v => ({ ...v, enabled: v.variant_number !== 1 })) };
+assert.equal(selectBattleHand(normalizeRemoteRows([hiddenBase]), 'remote', localCards).length, 0, 'V1 OFF gates all variants');
+assert.equal(player.owns('alt-uuid'), true, 'V1 OFF preserves acquisition history');
+assert.equal(selectBattleHand([], 'remote', localCards).length, 0, 'an empty successful feed must not unlock local filler');
+const deletedAlt = { ...modernRow, card_variants: modernRow.card_variants.map(v => ({ ...v, deleted_at: v.variant_number === 2 ? '2026-10-15T12:00:00Z' : null })) };
+assert.ok(normalizeRemoteRows([deletedAlt])[0].front.endsWith('/base.png'), 'deleted selected art falls back to V1');
+assert.equal(player.selected('parent-uuid'), 'alt-uuid');
+const deletedBase = { ...modernRow, card_variants: modernRow.card_variants.filter(v => v.variant_number !== 1) };
+assert.equal(normalizeRemoteRows([deletedBase])[0].playable, false, 'missing V1 gates all remaining variants');
+assert.equal(normalizeRemoteRows([{ ...modernRow, deleted_at: '2026-10-15T12:00:00Z' }]).length, 0, 'trashed parent is excluded');
 
 console.log('card source adapter tests passed');

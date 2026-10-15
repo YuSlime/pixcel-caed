@@ -1,0 +1,8 @@
+project_id = "zwhuhyeltbbggvikclou"
+
+# ADMIN KEY is validated inside card-admin; card-redeem is a public no-login endpoint.
+[functions.card-admin]
+verify_jwt = false
+
+[functions.card-redeem]
+verify_jwt = false

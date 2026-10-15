@@ -7,20 +7,30 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#07111e;color:#fff;overflow:hidden}button{font:inherit}.screen{position:fixed;inset:0}#menu{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center,#173d68 0,#0a1b2e 45%,#050b12 100%)}.panel{width:min(680px,92vw);padding:50px 25px;text-align:center;border:2px solid #365d86;border-radius:24px;background:#071321eb;box-shadow:0 30px 80px #0008}h1{font-size:clamp(32px,7vw,64px);margin:0 0 12px;letter-spacing:5px}.desc{color:#a9c3dd;margin-bottom:12px}.status{color:#6f96bc;font-size:12px;margin-bottom:28px}.menuActions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}.menuBtn{border:0;border-radius:12px;padding:18px 34px;color:#fff;font-weight:900;font-size:18px;background:linear-gradient(#40a7ff,#1163ba);box-shadow:0 8px 0 #093c72;cursor:pointer;transition:.15s}.menuBtn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}.menuBtn:disabled{opacity:.45;cursor:wait}#libraryBtn{background:linear-gradient(#2d7dad,#174e73);box-shadow:0 8px 0 #0b304a}#battle{display:none;grid-template-rows:56px minmax(0,1fr) 240px;height:100%}header{display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #ffffff18;background:#08131f}#backBtn,#libraryBackBtn{padding:8px 12px;border:1px solid #ffffff25;background:#ffffff0b;color:#fff;border-radius:8px;cursor:pointer}.board{position:relative;display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;padding:30px;background:radial-gradient(circle at center,#163e67 0,#0d2339 36%,#08131f 100%);border-bottom:1px solid #ffffff15;overflow:auto}.board:before{content:"YOUR FIELD";position:absolute;top:14px;left:18px;color:#7fa6c9;font-size:12px;letter-spacing:2px}.empty{color:#8daac5;border:1px dashed #507293;padding:18px;border-radius:10px;text-align:center}.hand{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:12px;padding:28px 12px 30px;background:#07101a;overflow:visible;min-height:240px}.hand:before{content:"YOUR HAND";position:absolute;left:16px;top:10px;color:#6f96bc;font-size:11px;letter-spacing:2px}.slot{width:120px;aspect-ratio:3/4;perspective:1000px;cursor:pointer;transition:.18s;position:relative;flex:0 0 auto;filter:drop-shadow(0 12px 10px #0008)}.slot:hover{transform:translateY(-20px) scale(1.05);z-index:20}.inner{position:absolute;inset:0;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;transition:transform .5s ease;will-change:transform}.slot:hover .inner{transform:rotateY(180deg)}.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:8px;background:#0d2744;transition:opacity .15s ease}.face.back{transform:rotateY(0deg);opacity:1}.face.front{transform:rotateY(180deg);opacity:0}.slot:hover .face.back{opacity:0}.slot:hover .face.front{opacity:1}.face img,.fieldCard img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;visibility:visible!important;opacity:1!important}.fieldCard{width:165px;aspect-ratio:3/4;display:block;position:relative;flex:0 0 auto;overflow:visible;animation:drop .25s ease-out;filter:drop-shadow(0 14px 12px #0008);border-radius:8px;background:#0d2744}.fieldCard img{position:absolute;inset:0}@keyframes drop{from{opacity:0;transform:translateY(60px) scale(.8)}to{opacity:1;transform:none}}#msg{position:absolute;top:70px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:8px;background:#06101be8;border:1px solid #4185bd;color:#d8efff;opacity:0;transition:.2s;pointer-events:none;z-index:99}#msg.show{opacity:1}#library{display:none;grid-template-rows:56px minmax(0,1fr);height:100%;background:radial-gradient(circle at top,#15395f 0,#091725 48%,#050b12 100%)}.libraryBody{overflow:auto;padding:24px}.libraryTop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 auto 18px;width:min(1180px,100%)}#libraryMode{font-size:12px;letter-spacing:1px;color:#87aed0}.libraryGrid{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:18px;padding-bottom:28px}.libraryCard{min-width:0;border:1px solid #2e567a;border-radius:14px;background:#081827;padding:10px;box-shadow:0 14px 30px #0005}.libraryArt{width:100%;aspect-ratio:512/683;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#0c253c;overflow:hidden;color:#6f91ae;font-size:11px;letter-spacing:1px}.libraryArt img{width:100%;height:100%;object-fit:contain;display:block}.libraryArt.broken:after{content:"IMAGE ERROR"}.libraryName{display:block;margin-top:9px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.libraryMeta{margin-top:5px;color:#8fb0ce;font-size:10px;line-height:1.5}.libraryEmpty{grid-column:1/-1;padding:50px 16px;text-align:center;color:#83a5c4;border:1px dashed #375d7c;border-radius:14px}@media(max-width:760px){#battle{grid-template-rows:52px minmax(0,1fr) 190px}.slot{width:17vw;max-width:82px;min-width:55px}.hand{gap:3px;padding:26px 5px 22px;min-height:190px}.fieldCard{width:120px}.panel{padding:38px 18px}.menuActions{flex-direction:column;align-items:stretch}.menuBtn{width:100%}.libraryBody{padding:15px 10px}.libraryGrid{grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:10px}}
 </style>
+<style>
+.libraryCard{cursor:pointer;color:inherit;font:inherit;text-align:left}.libraryCard:hover{border-color:#7dc4ff}.libraryCard:focus-visible,.variantThumb:focus-visible{outline:3px solid #83caff;outline-offset:3px}.ownership{font-size:11px;color:#a8bed4;margin-top:8px}.ownership.locked{color:#d3ac7a}#libraryDetail{width:min(620px,94vw);max-height:92vh;overflow:auto;background:#091b2c;border:1px solid #4d83ae;border-radius:18px;color:#fff;padding:22px}#libraryDetail::backdrop{background:#000b}.detailHeader{display:flex;align-items:center;justify-content:space-between;gap:12px}.quietBtn{padding:9px 14px;background:#153b59;color:#fff;border:1px solid #4a7697;border-radius:9px;cursor:pointer}.detailPreview{width:min(285px,100%);aspect-ratio:512/682;object-fit:contain;display:block;margin:14px auto}.variantList{display:flex;gap:12px;overflow-x:auto;padding:8px 2px 15px}.variantThumb{flex:0 0 110px;border:1px solid #3b5e7b;border-radius:10px;background:#102c43;color:#fff;padding:7px;cursor:pointer;text-align:center;font-size:11px}.variantThumb img{width:100%;aspect-ratio:512/682;object-fit:contain}.variantThumb[aria-pressed=true]{border-color:#80cbff;box-shadow:0 0 0 1px #80cbff}.variantThumb.locked img{opacity:.5}.variantThumb span{display:block;padding-top:5px}.variantUse{width:100%;padding:13px;border:0;border-radius:10px;background:#1677bd;color:#fff;font-weight:bold;cursor:pointer}.variantUse:disabled{opacity:.45;cursor:default}#detailStatus{color:#b7cde0;font-size:13px;min-height:20px}#redeem{display:none;background:radial-gradient(circle at top,#15395f,#050b12);overflow:auto}.redeemBody{width:min(620px,94vw);margin:45px auto;padding:28px;border:1px solid #365d86;border-radius:18px;background:#091b2c}.redeemBody label{display:block;margin:20px 0 8px}#redeemCode{width:100%;border:1px solid #527ea1;border-radius:10px;background:#06121f;color:#fff;padding:15px;font-size:20px;text-transform:uppercase}#redeemSubmit{margin-top:15px;width:100%}#redeemResult{line-height:1.8;margin-top:24px;overflow-wrap:anywhere}#redeemResult.error{color:#ffc49b}#redeemResult.success{color:#b2e8c1}.storageNote{color:#94afc6;font-size:12px;line-height:1.6;margin-top:25px}
+</style>
 </head>
 <body>
-<section id="menu" class="screen"><div class="panel"><h1>PIXEL CARD</h1><div class="desc">カード反転・手札・場への配置テスト</div><div id="status" class="status">カードデータを読み込み中...</div><div class="menuActions"><button id="battleBtn" class="menuBtn" disabled>BATTLE</button><button id="libraryBtn" class="menuBtn" disabled>CARD LIBRARY</button></div></div></section>
+<section id="menu" class="screen"><div class="panel"><h1>PIXEL CARD</h1><div class="desc">カード反転・手札・場への配置テスト</div><div id="status" class="status">カードデータを読み込み中...</div><div class="menuActions"><button id="battleBtn" class="menuBtn" disabled>BATTLE</button><button id="libraryBtn" class="menuBtn" disabled>CARD LIBRARY</button><button id="redeemBtn" class="menuBtn">REDEEM CODE</button></div></div></section>
 <section id="battle" class="screen"><header><b>BATTLE FIELD</b><button id="backBtn">メニューへ戻る</button></header><main id="board" class="board"></main><footer id="hand" class="hand"></footer><div id="msg"></div></section>
 <section id="library" class="screen"><header><b>CARD LIBRARY</b><button id="libraryBackBtn">メニューへ戻る</button></header><main class="libraryBody"><div class="libraryTop"><b>COLLECTION</b><span id="libraryMode"></span></div><div id="libraryGrid" class="libraryGrid"></div></main></section>
+<dialog id="libraryDetail" aria-labelledby="detailName"><div class="detailHeader"><b id="detailName"></b><button id="closeLibraryDetail" class="quietBtn">閉じる</button></div><img id="detailPreview" class="detailPreview" alt=""><p id="detailStats"></p><div id="variantList" class="variantList" aria-label="Variant一覧"></div><p id="detailStatus" role="status"></p><button id="useVariant" class="variantUse">このVariantを使用</button></dialog>
+<section id="redeem" class="screen"><header><b>REDEEM CODE</b><button id="redeemBackBtn" class="quietBtn">メニューへ戻る</button></header><main class="redeemBody"><b>カードとVariantを入手</b><form id="redeemForm"><label for="redeemCode">配布コード</label><input id="redeemCode" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="128" required><button id="redeemSubmit" class="menuBtn" type="submit">REDEEM</button></form><div id="redeemResult" role="status" aria-live="polite"></div><p class="storageNote">所持Variantと使用中の絵柄はこのブラウザに保存されます。ブラウザの保存データを消すと復元できません。</p></main></section>
 <script src="./data/cards.js"></script>
+<script src="./data/player-variants.js"></script>
 <script src="./data/card-source.js"></script>
+<script src="./data/card-redeem.js"></script>
 <script>
 const LOCAL_CARDS=window.CARDS||[];
 const N=5;
 let loadedCards=LOCAL_CARDS.slice();
 let cardSource='local';
 let startingHand=[];
+let battleArtFallback=false;
 const menu=document.getElementById('menu'),battle=document.getElementById('battle'),library=document.getElementById('library'),board=document.getElementById('board'),hand=document.getElementById('hand'),msg=document.getElementById('msg'),battleBtn=document.getElementById('battleBtn'),libraryBtn=document.getElementById('libraryBtn'),statusEl=document.getElementById('status'),libraryGrid=document.getElementById('libraryGrid'),libraryMode=document.getElementById('libraryMode');
+const redeem=document.getElementById('redeem'),redeemResult=document.getElementById('redeemResult'),redeemSubmit=document.getElementById('redeemSubmit'),libraryDetail=document.getElementById('libraryDetail');
+let detailCard=null,previewVariantId=null;
 function verifyImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve();img.onerror=()=>reject(new Error(`PNG画像の読み込みに失敗: ${src}`));img.src=src})}
 function getStartupArtUrls(cards){return [...new Set(cards.flatMap(card=>[card.front,card.back]))]}
 async function preloadHand(cards){const urls=getStartupArtUrls(cards);await Promise.all(urls.map(verifyImage));return urls}
@@ -30,14 +40,16 @@ async function initializeCards(){
     loadedCards=cardResult.cards;
     cardSource=cardResult.source;
     startingHand=CardSource.selectBattleHand(loadedCards,cardSource,LOCAL_CARDS,N);
-    let localBattleHand=cardSource!=='remote'||cardResult.remoteCount<N;
+    const variantFeed=cardSource==='remote'&&(!loadedCards.length||loadedCards.some(card=>card.internalId));
+    let localBattleHand=cardSource!=='remote'||(!variantFeed&&cardResult.remoteCount<N);
 
     try{
       await preloadHand(startingHand);
     }catch(e){
-      if(!localBattleHand){
+      if(!localBattleHand&&!variantFeed){
         console.warn('Remote battle artwork failed; using local fallback hand.',e);
         startingHand=CardSource.selectBattleHand([], 'local', LOCAL_CARDS, N);
+        battleArtFallback=true;
         localBattleHand=true;
         await preloadHand(startingHand);
       }else{
@@ -45,12 +57,14 @@ async function initializeCards(){
       }
     }
 
-    battleBtn.disabled=false;
+    battleBtn.disabled=startingHand.length===0;
     libraryBtn.disabled=false;
     if(cardSource==='local'){
       statusEl.textContent='OFFLINE MODE - LOCAL CARD DATA';
     }else if(localBattleHand){
       statusEl.textContent=`READY - ${cardResult.remoteCount} CARDS LOADED / LOCAL BATTLE HAND`;
+    }else if(variantFeed&&!startingHand.length){
+      statusEl.textContent=`READY - ${cardResult.remoteCount} CARDS LOADED / V1を入手するとBATTLEで使用できます`;
     }else{
       statusEl.textContent=`READY - ${cardResult.remoteCount} CARDS LOADED`;
     }
@@ -61,10 +75,30 @@ async function initializeCards(){
     console.error(e);
   }
 }
-battleBtn.onclick=()=>{menu.style.display='none';battle.style.display='grid';reset()};
+battleBtn.onclick=async()=>{
+  try{refreshPlayerCards();await preloadHand(startingHand);menu.style.display='none';battle.style.display='grid';reset()}
+  catch(error){statusEl.textContent='カード画像を読み込めませんでした';console.warn(error)}
+};
 document.getElementById('backBtn').onclick=()=>{battle.style.display='none';menu.style.display='flex'};
 libraryBtn.onclick=()=>{renderLibrary(loadedCards,cardSource);menu.style.display='none';library.style.display='grid'};
 document.getElementById('libraryBackBtn').onclick=()=>{library.style.display='none';menu.style.display='flex'};
+document.getElementById('redeemBtn').onclick=()=>{menu.style.display='none';redeem.style.display='block';document.getElementById('redeemCode').focus()};
+document.getElementById('redeemBackBtn').onclick=()=>{redeem.style.display='none';menu.style.display='flex'};
+document.getElementById('closeLibraryDetail').onclick=()=>libraryDetail.close();
+function refreshPlayerCards(){loadedCards=CardSource.resolveCards(loadedCards);startingHand=battleArtFallback?CardSource.selectBattleHand([], 'local', LOCAL_CARDS, N):CardSource.selectBattleHand(loadedCards,cardSource,LOCAL_CARDS,N);battleBtn.disabled=!startingHand.length}
+document.getElementById('redeemForm').onsubmit=async event=>{
+  event.preventDefault();if(redeemSubmit.disabled)return;
+  redeemSubmit.disabled=true;redeemResult.className='';redeemResult.textContent='コードを確認中...';
+  try{
+    const result=await CardRedeem.redeemCode(document.getElementById('redeemCode').value);
+    redeemResult.replaceChildren();redeemResult.className='success';
+    const title=document.createElement('b');title.textContent='REDEEM SUCCESS';
+    const list=document.createElement('ul');
+    result.grants.forEach(grant=>{const item=document.createElement('li');item.textContent=`No.${String(grant.card_number||'').padStart(3,'0')} ${grant.name||''} / V${grant.variant_number} ${grant.variant_name||'通常'} を入手しました`;list.appendChild(item)});
+    redeemResult.append(title,list);refreshPlayerCards();
+  }catch(error){redeemResult.className='error';redeemResult.textContent=error.message||'コードを引換できませんでした'}
+  finally{redeemSubmit.disabled=false}
+};
 function reset(){hand.innerHTML='';board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';startingHand.forEach(card=>hand.appendChild(makeCard(card)))}
 function makeCard(card){
   const s=document.createElement('div');
@@ -89,8 +123,9 @@ function makeCard(card){
   s.onclick=()=>playCard(s,card);
   return s;
 }
-function playCard(s,card){document.getElementById('empty')?.remove();const c=document.createElement('div');c.className='fieldCard';c.dataset.cardId=card.id;const img=document.createElement('img');img.src=card.front;img.alt=card.name;c.appendChild(img);board.appendChild(c);s.remove();toast(`${card.name} を場に出しました`)}
+function playCard(s,card){document.getElementById('empty')?.remove();const c=document.createElement('div');c.className='fieldCard';c.dataset.cardId=card.id;c.dataset.attack=card.attack;c.dataset.defense=card.defense;c.dataset.cost=card.cost;const img=document.createElement('img');img.src=card.front;img.alt=card.name;c.appendChild(img);board.appendChild(c);s.remove();toast(`${card.name} を場に出しました`)}
 function renderLibrary(cards,source){
+  cards=CardSource.resolveCards(cards);
   libraryGrid.replaceChildren();
   libraryMode.textContent=source==='local'?'LOCAL / OFFLINE MODE':`${cards.length} CARDS`;
   if(cards.length===0){
@@ -101,7 +136,8 @@ function renderLibrary(cards,source){
     return;
   }
   cards.forEach(card=>{
-    const tile=document.createElement('article');
+    const tile=document.createElement('button');
+    tile.type='button';
     tile.className='libraryCard';
     tile.dataset.cardId=card.id;
     const art=document.createElement('div');
@@ -119,8 +155,33 @@ function renderLibrary(cards,source){
     meta.className='libraryMeta';
     meta.textContent=`${card.rarity} • COST ${card.cost} • ATK ${card.attack} • DEF ${card.defense}`;
     tile.append(art,name,meta);
+    if(card.internalId){
+      const ownership=document.createElement('div');ownership.className='ownership'+(card.playable?'':' locked');
+      ownership.textContent=!card.available?'使用不可':card.playable?'所持':'未所持 / V1を入手してください';
+      tile.appendChild(ownership);tile.onclick=()=>openCardDetail(card);
+    }
     libraryGrid.appendChild(tile);
   });
+}
+function openCardDetail(card){detailCard=card;previewVariantId=card.activeVariantId;renderCardDetail();if(!libraryDetail.open)libraryDetail.showModal()}
+function renderCardDetail(){
+  const card=CardSource.resolveCards([detailCard])[0];detailCard=card;
+  const variant=card.variants.find(item=>item.internalId===previewVariantId)||card.variants[0];
+  document.getElementById('detailName').textContent=`No.${String(card.cardNumber||'').padStart(3,'0')} ${card.name}`;
+  const preview=document.getElementById('detailPreview');preview.src=variant?.front||card.front;preview.alt=card.name;
+  document.getElementById('detailStats').textContent=`${card.rarity} • COST ${card.cost} • ATK ${card.attack} • DEF ${card.defense}`;
+  const list=document.getElementById('variantList');list.replaceChildren();
+  card.variants.forEach(item=>{
+    const owned=PlayerVariants.owns(item.internalId);const thumb=document.createElement('button');thumb.type='button';thumb.className='variantThumb'+(owned?'':' locked');thumb.dataset.variantId=item.internalId;thumb.setAttribute('aria-pressed',String(item.internalId===variant?.internalId));
+    const img=document.createElement('img');img.src=item.front;img.alt=item.name;img.loading='lazy';
+    const label=document.createElement('span');label.textContent=`V${item.number} ${item.name}`;
+    const badge=document.createElement('span');badge.textContent=!item.enabled?'使用不可':!owned?'未所持':card.playable&&item.internalId===card.activeVariantId?'使用中':'所持';
+    thumb.append(img,label,badge);thumb.onclick=()=>{previewVariantId=item.internalId;renderCardDetail()};list.appendChild(thumb);
+  });
+  const owned=variant&&PlayerVariants.owns(variant.internalId);const canUse=card.playable&&owned&&variant.enabled&&!!variant.front;
+  const button=document.getElementById('useVariant');button.disabled=!canUse;
+  document.getElementById('detailStatus').textContent=!card.available?'V1が使用不可のため、このカードは使用できません':!owned?'このVariantは未所持です':!variant.enabled?'このVariantは使用不可です':'';
+  button.onclick=()=>{try{if(!canUse)return;PlayerVariants.select(card.id,variant.internalId);refreshPlayerCards();renderLibrary(loadedCards,cardSource);renderCardDetail()}catch(error){document.getElementById('detailStatus').textContent=error.message}};
 }
 function toast(t){msg.textContent=t;msg.classList.add('show');clearTimeout(window.mt);window.mt=setTimeout(()=>msg.classList.remove('show'),900)}
 initializeCards();

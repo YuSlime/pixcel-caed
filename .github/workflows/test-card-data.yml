@@ -6,9 +6,8 @@ on:
     paths:
       - 'index.html'
       - 'card-manager.html'
-      - 'data/cards.js'
-      - 'data/card-source.js'
-      - 'data/card-maker*.js'
+      - 'data/**'
+      - 'supabase/**'
       - 'assets/cards/**'
       - 'assets/card-maker/**'
       - 'tests/**'
@@ -17,6 +16,8 @@ on:
       - '.gitattributes'
       - '.github/workflows/test-card-data.yml'
   workflow_dispatch:
+  workflow_call:
+  pull_request:
 
 permissions:
   contents: read

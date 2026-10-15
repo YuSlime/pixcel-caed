@@ -6,6 +6,8 @@
     "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.mjs"
   },
   "devDependencies": {
-    "playwright": "1.62.1"
+    "@electric-sql/pglite": "0.5.10",
+    "playwright": "1.62.1",
+    "supabase": "2.121.0"
   }
 }
