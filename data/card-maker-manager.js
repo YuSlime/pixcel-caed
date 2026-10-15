@@ -258,7 +258,7 @@
     document.querySelectorAll('[data-tab]').forEach(element=>{const selected=element.dataset.tab===tab;element.setAttribute('aria-selected',String(selected));element.tabIndex=selected?0:-1;});
     for (const name of ['create','manage','trash','codes']) $(name+'Panel').hidden=name!==tab;
     renderLists();
-    if (tab==='codes' && adminKey.value.trim()) working(async()=>{codes=(await api.request('list-codes')).codes||[];renderCodes();});
+    if (tab==='codes' && adminKey.value.trim()) working(async()=>{codes=(await api.request('list-codes')).codes||[];renderCodes();},'コード一覧を読み込みました');
   }
   const tabButtons=Array.from(document.querySelectorAll('[data-tab]'));
   tabButtons.forEach((element,index)=>{
@@ -482,7 +482,7 @@
       });
       renderCard();
       if (!imageLoading) show('元のCARD MAKER素材を読み込みました。キャラクター画像を選択してください');
-      if(adminKey.value.trim()) working(loadData);
+      if(adminKey.value.trim()) working(loadData,'データを読み込みました');
     } catch (error) { template = null; show(error.message || 'カード素材を読み込めませんでした', true); refreshActions(); }
   })();
 })();

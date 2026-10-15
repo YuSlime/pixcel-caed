@@ -245,6 +245,25 @@ async function connected(t, cards=managedCards(), responder) {
   await page.waitForFunction(()=>document.querySelector('#cardNumber').value==='3');
   return {page,requests};
 }
+for(const fails of [false,true])test(`saved-key automatic card loading reports ${fails?'the request error':'completion'}`,async t=>{
+  const page=await manager(t,async page=>{
+    await page.addInitScript(()=>localStorage.setItem('pixelCardAdminKey','test-key'));
+    await page.route(adminEndpoint,route=>route.fulfill(fails?{status:503,json:{error:'自動カード読込失敗'}}:{json:{cards:managedCards()}}));
+  });
+  await page.waitForFunction(()=>!document.querySelector('#loadCards').disabled&&(document.querySelector('#msg').classList.contains('err')||document.querySelector('#connectionStatus').textContent==='2 カードを読み込みました'));
+  if(fails){assert.equal(await page.locator('#msg').textContent(),'自動カード読込失敗');assert.equal(await page.locator('#msg').evaluate(element=>element.classList.contains('err')),true);}
+  else{assert.match(await page.locator('#msg').textContent(),/読み込みました/);assert.equal(await page.locator('#msg').evaluate(element=>element.classList.contains('ok')),true);}
+});
+
+for(const fails of [false,true])test(`code list loading reports ${fails?'the request error':'completion'}`,async t=>{
+  const {page}=await connected(t);
+  await page.route(adminEndpoint,async route=>{if(route.request().postDataJSON().action==='list-codes')await route.fulfill(fails?{status:503,json:{error:'コード一覧読込失敗'}}:{json:{codes:[]}});else await route.fallback();});
+  await page.getByRole('tab',{name:'コード管理',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('#loadCards').disabled);
+  if(fails){assert.equal(await page.locator('#msg').textContent(),'コード一覧読込失敗');assert.equal(await page.locator('#msg').evaluate(element=>element.classList.contains('err')),true);}
+  else{assert.match(await page.locator('#msg').textContent(),/コード.*読み込みました/);assert.equal(await page.locator('#msg').evaluate(element=>element.classList.contains('ok')),true);}
+});
+
 test('four light workspace tabs guard dirty edits and create uses next parent number',async t=>{
   const {page}=await connected(t);
   assert.equal(await page.getByRole('tab').count(),4);
