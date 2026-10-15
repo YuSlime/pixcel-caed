@@ -35,7 +35,8 @@ jobs:
           rebuilt = 0
           for card_id, output in mapping.items():
               chunk_dir = pathlib.Path('.card-import') / card_id
-              chunks = sorted(chunk_dir.glob('*.txt'))
+              # Only the canonical three-digit chunk set (000.txt, 001.txt, ...)
+              chunks = sorted(p for p in chunk_dir.glob('*.txt') if p.stem.isdigit() and len(p.stem) == 3)
               if not chunks:
                   print('skip', card_id)
                   continue
