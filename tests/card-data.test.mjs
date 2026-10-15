@@ -74,8 +74,10 @@ assert.match(index, /window\.CARDS|LOCAL_CARDS/, 'index.html should preserve the
 assert.match(index, /const\s+N\s*=\s*5\s*;/, 'starting hand size should remain 5');
 assert.match(index, /CardSource\.selectBattleHand\s*\(/, 'starting hand should be selected through the card source adapter');
 assert.match(index, /startingHand\.forEach\(card=>hand\.appendChild\(makeCard\(card\)\)\)/, 'reset should render the selected card objects');
-assert.match(index, /class="face back"[^>]*><img src="\$\{card\.back\}"/, 'hand card back should use card.back');
-assert.match(index, /class="face front"[^>]*><img src="\$\{card\.front\}"/, 'hand card front should use card.front');
+assert.doesNotMatch(index, /s\.innerHTML\s*=.*\$\{card\./s, 'remote card fields must not be interpolated into hand-card innerHTML');
+assert.match(index, /backImg\.src\s*=\s*card\.back/, 'hand card back should use card.back via DOM property assignment');
+assert.match(index, /frontImg\.src\s*=\s*card\.front/, 'hand card front should use card.front via DOM property assignment');
+assert.match(index, /frontImg\.alt\s*=\s*card\.name/, 'remote card name should be assigned safely through the DOM');
 assert.match(index, /\.slot:hover\s+\.inner\{transform:rotateY\(180deg\)\}/, 'hover should flip the hand card');
 assert.match(index, /s\.onclick\s*=\s*\(\)\s*=>\s*playCard\(s,card\)/, 'click should play the selected card');
 assert.match(index, /img\.src\s*=\s*card\.front/, 'field card should show the front artwork');
