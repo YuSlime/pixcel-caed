@@ -8,6 +8,7 @@ on:
       - 'card-manager.html'
       - 'data/cards.js'
       - 'data/card-source.js'
+      - 'data/card-maker*.js'
       - 'assets/cards/**'
       - 'tests/card-data.test.mjs'
       - 'tests/card-manager.test.mjs'
