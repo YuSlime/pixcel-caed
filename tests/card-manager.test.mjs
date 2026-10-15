@@ -17,8 +17,8 @@ for (const id of ['characterFile','characterDrop','cardCanvas','savePng']) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `missing integrated maker #${id}`);
 }
 assert.match(html, /<canvas[^>]+id=["']cardCanvas["'][^>]+width=["']512["'][^>]+height=["']682["']/, 'maker canvas should render at 512x682');
-assert.match(html, /card-maker-template-0\.js/, 'maker should load the optimized blue-card template data');
-assert.match(html, /CARD_MAKER_TEMPLATE_CHUNKS/, 'maker should assemble the embedded blue-card template');
+assert.match(html, /function\s+drawBlueCardFrame\s*\(/, 'maker should render the blue-card frame in canvas');
+assert.match(html, /function\s+renderCard\s*\(/, 'maker should support live card preview rendering');
 assert.match(html, /canvas\.toBlob\s*\(/, 'maker should export generated artwork as PNG');
 assert.match(html, /new File\s*\(\s*\[blob\]/, 'generated PNG should become a File for upload');
 assert.match(html, /form\.append\(\s*['"]file['"]\s*,\s*generatedFile\s*\)/, 'ADD CARD should upload the generated card image');
