@@ -66,7 +66,29 @@ document.getElementById('backBtn').onclick=()=>{battle.style.display='none';menu
 libraryBtn.onclick=()=>{renderLibrary(loadedCards,cardSource);menu.style.display='none';library.style.display='grid'};
 document.getElementById('libraryBackBtn').onclick=()=>{library.style.display='none';menu.style.display='flex'};
 function reset(){hand.innerHTML='';board.innerHTML='<div id="empty" class="empty">カードにカーソルを合わせると表になります。<br>クリックすると場に出せます。</div>';startingHand.forEach(card=>hand.appendChild(makeCard(card)))}
-function makeCard(card){const s=document.createElement('div');s.className='slot';s.dataset.cardId=card.id;s.innerHTML=`<div class="inner"><div class="face back"><img src="${card.back}" alt="カード裏面"></div><div class="face front"><img src="${card.front}" alt="${card.name}"></div></div>`;s.onclick=()=>playCard(s,card);return s}
+function makeCard(card){
+  const s=document.createElement('div');
+  s.className='slot';
+  s.dataset.cardId=card.id;
+  const inner=document.createElement('div');
+  inner.className='inner';
+  const backFace=document.createElement('div');
+  backFace.className='face back';
+  const backImg=document.createElement('img');
+  backImg.src=card.back;
+  backImg.alt='カード裏面';
+  backFace.appendChild(backImg);
+  const frontFace=document.createElement('div');
+  frontFace.className='face front';
+  const frontImg=document.createElement('img');
+  frontImg.src=card.front;
+  frontImg.alt=card.name;
+  frontFace.appendChild(frontImg);
+  inner.append(backFace,frontFace);
+  s.appendChild(inner);
+  s.onclick=()=>playCard(s,card);
+  return s;
+}
 function playCard(s,card){document.getElementById('empty')?.remove();const c=document.createElement('div');c.className='fieldCard';c.dataset.cardId=card.id;const img=document.createElement('img');img.src=card.front;img.alt=card.name;c.appendChild(img);board.appendChild(c);s.remove();toast(`${card.name} を場に出しました`)}
 function renderLibrary(cards,source){
   libraryGrid.replaceChildren();
