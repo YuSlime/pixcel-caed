@@ -306,13 +306,10 @@ Expected:
 
 After integration to `main`, verify both:
 - `Test card data` workflow conclusion `success`;
-- `Deploy to GitHub Pages` job conclusion `success`.
+- `Deploy to GitHub Pages` job conclusion `success`;
+- the production `index.html` responds successfully and contains the expected Supabase card-source and CARD LIBRARY markers.
 
-Then open/check the production page behavior:
-- main menu reports the expected source status;
-- BATTLE opens with the expected hand source;
-- CARD LIBRARY opens without another metadata fetch;
-- existing hover flip and click-to-play remain functional.
+Interactive runtime behavior is proven by the automated tests from Tasks 1-3 in this harness; no claim of manual browser interaction should be made unless an interactive browser is actually available.
 
 - [ ] **Step 7: Final commit/status review**
 
