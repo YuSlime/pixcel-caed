@@ -11,9 +11,13 @@
   let template = null, characterImage = null, characterUrl = '', sourceFile = null, imageSerial = 0, imageLoading = false, busy = false;
   const state = new window.CardManagerState();
   const api = new window.CardManagerApi(() => adminKey.value);
-  let codes = [], editSerial = 0, dragId = null;
+  let codes = [], editSerial = 0, dragId = null, adminKeyRevision = 0;
   const folded = new Set();
   adminKey.value = localStorage.getItem('pixelCardAdminKey') || '';
+  adminKey.addEventListener('input',()=>{adminKeyRevision++;});
+  function rememberAdminKey(key,revision) {
+    if(key&&revision===adminKeyRevision&&adminKey.value.trim()===key)localStorage.setItem('pixelCardAdminKey',key);
+  }
 
   function slugify(value) {
     return value.trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
@@ -24,8 +28,9 @@
   }
   function refreshActions() {
     saveCard.disabled = savePng.disabled = !template || !characterImage || imageLoading || busy;
-    [cardId, cardName, cost, attack, defense, rarity, adminKey, characterFile, $('variantName'), $('clearCharacter'), $('forgetKey'), $('loadCards')]
+    [cardId, cardName, cost, attack, defense, rarity, adminKey, characterFile, $('variantName'), $('clearCharacter'), $('loadCards')]
       .forEach(element => { element.disabled = busy; });
+    $('forgetKey').disabled=false;
     characterDrop.setAttribute('aria-disabled', String(busy));
     document.querySelectorAll('[data-tab]').forEach(element => { element.disabled = busy; });
     $('saveOrder').disabled = $('undoOrder').disabled = busy || !state.order.length;
@@ -125,6 +130,7 @@
   [cardId,cardName,cost,attack,defense,rarity,$('variantName')].forEach(element=>element.addEventListener('input',()=>{state.dirty=true;}));
   $('clearCharacter').addEventListener('click', () => { clearCharacter(); state.dirty=true; show('画像を解除しました'); });
   $('forgetKey').addEventListener('click', () => {
+    adminKeyRevision++;
     localStorage.removeItem('pixelCardAdminKey'); adminKey.value = ''; show('保存した管理キーを削除しました');
   });
 
@@ -150,7 +156,7 @@
   saveCard.addEventListener('click', async () => {
     if (!template || !characterImage || imageLoading || busy) return;
     result.classList.remove('show');
-    const key = adminKey.value.trim(), id = slugify(cardId.value), name = core.normalizeName(cardName.value);
+    const key = adminKey.value.trim(), revision = adminKeyRevision, id = slugify(cardId.value), name = core.normalizeName(cardName.value);
     if (!key) return show('ADMIN KEYを入力してください', true);
     if (!id) return show('CARD IDを入力してください', true);
     if (!name) return show('NAMEを入力してください', true);
@@ -170,7 +176,7 @@
       form.append('rarity', rarity.value);
       form.append('variant_name', $('variantName').value.trim() || '通常');
       const data = await api.request('create-card', form);
-      localStorage.setItem('pixelCardAdminKey', key);
+      rememberAdminKey(key,revision);
       result.replaceChildren();
       const title = document.createElement('b'); title.textContent = data.card.name;
       const link = document.createElement('a');
@@ -213,14 +219,16 @@
     if (busy) return;
     busy = true;
     show('処理中...');
-    const controls = Array.from(document.querySelectorAll('button,input,select')).map(element=>[element,element.disabled]);
+    const controls = Array.from(document.querySelectorAll('button:not(#forgetKey),input,select')).map(element=>[element,element.disabled]);
     controls.forEach(([element])=>{element.disabled=true;}); refreshActions();
     try { const completion=await task(); if (message) show(typeof completion==='string'?completion:message,false,true); }
     catch(error) { show(error.message || String(error),true); }
     finally { busy=false; controls.forEach(([element,disabled])=>{element.disabled=disabled;}); refreshActions(); }
   }
   async function loadData(preserveOrder=true) {
+    const key=adminKey.value.trim(),revision=adminKeyRevision;
     const data = await api.request('list');
+    if(revision!==adminKeyRevision||adminKey.value.trim()!==key)return '管理キーが変更されたため、読み込み結果を破棄しました。';
     const draft=preserveOrder?state.order.slice():[];
     state.setCards(data.cards || []);
     if(draft.length){
@@ -228,7 +236,7 @@
       const ids=[...draft.filter(id=>saved.includes(id)),...saved.filter(id=>!draft.includes(id))];
       state.order=ids.every((id,index)=>id===saved[index])?[]:ids;
     }
-    localStorage.setItem('pixelCardAdminKey',adminKey.value.trim());
+    rememberAdminKey(key,revision);
     $('connectionStatus').textContent = `${state.cards.filter(card=>!card.deleted_at).length} カードを読み込みました`;
     renderLists();
   }

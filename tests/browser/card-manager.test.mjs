@@ -194,6 +194,38 @@ test('SAVE PNG downloads 512 × 682 and ADD sends that generated PNG and metadat
   await page.locator('#forgetKey').click();
   assert.equal(await page.evaluate(() => localStorage.getItem('pixelCardAdminKey')), null);
 });
+test('forgetting the admin key wins a pointer click racing startup and an in-flight automatic list response',async t=>{
+  let releaseConfig,releaseList,signalList;
+  const configHeld=new Promise(resolve=>{releaseConfig=resolve;});const listHeld=new Promise(resolve=>{releaseList=resolve;});const listStarted=new Promise(resolve=>{signalList=resolve;});
+  t.after(()=>{releaseConfig();releaseList();});
+  const page=await manager(t,async page=>{
+    await page.addInitScript(()=>{
+      localStorage.setItem('pixelCardAdminKey','test-key');window.forgetTrace=[];
+      const set=Storage.prototype.setItem,remove=Storage.prototype.removeItem;
+      Storage.prototype.setItem=function(key,value){if(key==='pixelCardAdminKey')window.forgetTrace.push({type:'storage-set',length:String(value).length});return set.call(this,key,value);};
+      Storage.prototype.removeItem=function(key){if(key==='pixelCardAdminKey')window.forgetTrace.push({type:'storage-remove'});return remove.call(this,key);};
+      for(const type of ['pointerdown','pointerup','click','focusin','focusout'])document.addEventListener(type,event=>{if(event.target.id==='forgetKey')window.forgetTrace.push({type,target:event.target.id,disabled:event.target.disabled,active:document.activeElement?.id});},true);
+    });
+    await page.route('**/assets/card-maker/blue-card/config.json',async route=>{await configHeld;await route.continue();});
+    await page.route(adminEndpoint,async route=>{signalList();await listHeld;await route.fulfill({json:{cards:[]}});});
+  });
+  let complete=false;
+  try{
+    await page.locator('#forgetKey').hover();await page.mouse.down();releaseConfig();await listStarted;await page.mouse.up();
+    assert.equal(await page.evaluate(()=>localStorage.getItem('pixelCardAdminKey')),null,'startup must not suppress the forget click');
+    releaseList();await page.waitForFunction(()=>!document.querySelector('#loadCards').disabled);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('pixelCardAdminKey')),null,'the late authenticated response must not remember a forgotten key');assert.equal(await page.locator('#adminKey').inputValue(),'');
+    complete=true;
+  }finally{releaseConfig();releaseList();if(!complete&&!page.isClosed())t.diagnostic(JSON.stringify(await page.evaluate(()=>({trace:window.forgetTrace,active:document.activeElement?.id,forgetDisabled:document.querySelector('#forgetKey').disabled,keyLength:localStorage.getItem('pixelCardAdminKey')?.length??null}))));}
+});
+test('a completed card upload cannot remember an admin key forgotten while its response was pending',async t=>{
+  let release,signal;const held=new Promise(resolve=>{release=resolve;});const requested=new Promise(resolve=>{signal=resolve;});t.after(()=>release());
+  const page=await manager(t);await selected(page);await fields(page);await page.locator('#adminKey').fill('test-key');
+  await page.route(adminEndpoint,async route=>{signal();await held;await route.fulfill({json:{card:{id:'blue-knight',name:'BLUE KNIGHT',image_url:'https://example.com/card.png'}}});});
+  await page.locator('#saveCard').click();await requested;assert.equal(await page.locator('#forgetKey').isDisabled(),false);await page.locator('#forgetKey').click();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('pixelCardAdminKey')),null);release();await page.waitForFunction(()=>document.querySelector('#result').classList.contains('show'));
+  assert.equal(await page.evaluate(()=>localStorage.getItem('pixelCardAdminKey')),null,'a successful earlier request cannot revoke the user decision to forget');assert.equal(await page.locator('#adminKey').inputValue(),'');
+});
 
 const managedCards = () => [{ internal_id:'parent-a',id:'blue',card_number:1,name:'BLUE',cost:1,attack:2,defense:3,rarity:'Rare',variants:[
   {internal_id:'variant-a1',card_internal_id:'parent-a',variant_number:1,variant_name:'通常',enabled:true,source_image_url:'./tests/fixtures/card-maker/character.png',rendered_image_url:'./tests/fixtures/card-maker/character.png'},
