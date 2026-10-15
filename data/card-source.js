@@ -1,9 +1,10 @@
 (() => {
   const PROJECT_URL = 'https://zwhuhyeltbbggvikclou.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_fvvNi8cWJW7XRmuiYVobMw_ukCD8UCh';
+  const CARD_ART_BASE = `${PROJECT_URL}/storage/v1/object/public/card-art/`;
   const SHARED_BACK = './assets/cards/shared/back.png?v=1';
   const RARITIES = new Set(['Common', 'Rare', 'Epic', 'Legendary']);
-  const SELECT_FIELDS = 'id,name,cost,attack,defense,rarity,image_url,enabled,created_at';
+  const SELECT_FIELDS = 'id,name,cost,attack,defense,rarity,image_path,enabled,created_at';
   const CARDS_URL = `${PROJECT_URL}/rest/v1/cards?select=${SELECT_FIELDS}&enabled=eq.true&order=created_at.asc,id.asc`;
 
   function cleanString(value) {
@@ -12,6 +13,12 @@
 
   function validStat(value) {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  }
+
+  function cardArtUrl(path) {
+    const cleanPath = cleanString(path).replace(/^\/+/, '');
+    if (!cleanPath) return '';
+    return CARD_ART_BASE + cleanPath.split('/').map(encodeURIComponent).join('/');
   }
 
   function normalizeRemoteRows(rows) {
@@ -25,7 +32,7 @@
 
       const id = cleanString(row.id);
       const name = cleanString(row.name);
-      const front = cleanString(row.image_url);
+      const front = cardArtUrl(row.image_path);
       const rarity = cleanString(row.rarity);
       const createdAt = cleanString(row.created_at);
 
