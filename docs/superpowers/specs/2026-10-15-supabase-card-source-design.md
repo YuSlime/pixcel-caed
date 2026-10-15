@@ -1,7 +1,7 @@
 # Supabase Card Source Design
 
 Date: 2026-10-15
-Status: Approved design, awaiting implementation-plan review
+Status: Design approved; written spec awaiting user review
 
 ## Goal
 
@@ -57,7 +57,7 @@ The normalized in-browser card shape is:
 }
 ```
 
-Supabase rows are read from `public.cards` where `enabled = true`, ordered by `created_at ASC`.
+Supabase rows are read from `public.cards` where `enabled = true`, ordered by `created_at ASC, id ASC` so the order is deterministic even if two rows share the same creation timestamp.
 
 Required remote fields:
 
@@ -83,7 +83,7 @@ The current shared local back image remains the common card back until a future 
 1. `data/cards.js` loads local fallback data.
 2. `data/card-source.js` exposes `loadCards()`.
 3. `index.html` calls `await loadCards()` once.
-4. `loadCards()` requests all enabled cards from Supabase REST, ordered by creation time ascending.
+4. `loadCards()` requests all enabled cards from Supabase REST, ordered by creation time and then ID.
 5. Valid rows are normalized into the browser card contract.
 6. The normalized list is cached in memory for the current page session.
 7. BATTLE and CARD LIBRARY both use that same list.
@@ -94,7 +94,7 @@ No screen should make another card-list request during the same page session.
 
 Temporary rule until deck editing is implemented:
 
-- If Supabase returns at least 5 valid cards: use the first 5 cards by `created_at ASC`.
+- If Supabase returns at least 5 valid cards: use the first 5 cards by `created_at ASC, id ASC`.
 - If Supabase returns 1-4 valid cards: do not create a partial remote hand; use local Novice Fighter x5.
 - If Supabase returns 0 valid cards: use local Novice Fighter x5.
 - If the request fails: use local Novice Fighter x5.
@@ -190,7 +190,7 @@ Required automated coverage:
 
 1. Remote cards are normalized correctly.
 2. Only enabled cards are accepted.
-3. Remote cards remain ordered by creation order.
+3. Remote cards remain deterministically ordered by creation time and ID.
 4. At least 5 remote cards -> first 5 form the battle hand.
 5. 1-4 remote cards -> local Novice Fighter x5 battle fallback.
 6. Remote failure -> local fallback.
