@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 
-const root = new URL('../', import.meta.url);
 const managerPath = new URL('../card-manager.html', import.meta.url);
 assert.equal(fs.existsSync(managerPath), true, 'card-manager.html should exist');
 
@@ -22,10 +21,13 @@ assert.doesNotMatch(html, /function\s+drawShield\s*\(/, 'manager must use the ZI
 const managerJsPath = new URL('../data/card-manager.js', import.meta.url);
 assert.equal(fs.existsSync(managerJsPath), true, 'data/card-manager.js should exist');
 const managerJs = fs.readFileSync(managerJsPath, 'utf8');
-for (const asset of ['config.json','frame.png','frame-mask.png','sword.png','shield.png']) {
-  assert.match(managerJs, new RegExp(asset.replace('.', '\\.')), `integration should load ${asset}`);
-}
-for (let n = 0; n <= 9; n++) assert.match(managerJs, new RegExp(`digits/${n}\\.png`), `integration should load digit ${n}`);
+assert.match(managerJs, /assets\/card-maker\/blue-card\//, 'integration should load the ZIP blue-card asset folder');
+assert.match(managerJs, /config\.json/, 'integration should load ZIP config.json');
+assert.match(managerJs, /config\.assets\.frame/, 'frame path should come from ZIP config');
+assert.match(managerJs, /config\.assets\.mask/, 'mask path should come from ZIP config');
+assert.match(managerJs, /config\.assets\.sword/, 'sword path should come from ZIP config');
+assert.match(managerJs, /config\.assets\.shield/, 'shield path should come from ZIP config');
+assert.match(managerJs, /config\.assets\.digits\.map/, 'digit paths should come from ZIP config');
 assert.match(managerJs, /CardMakerCore\.prepareTemplate/, 'integration should prepare the original ZIP template');
 assert.match(managerJs, /CardMakerCore\.drawCard/, 'integration should draw through the original ZIP engine');
 assert.match(managerJs, /characterFile\.value\s*=\s*['"]['"]/, 'file input should reset so the same image can be selected again');
