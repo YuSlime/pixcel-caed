@@ -330,6 +330,29 @@ test('numeric moves remain a draft until save and undo restores server order',as
   await page.waitForFunction(()=>document.querySelector('#msg').classList.contains('ok'));
   assert.deepEqual(requests.find(r=>r.action==='reorder').internal_ids,['parent-b','parent-a']);
 });
+test('parent number headings follow reorder drafts, undo and save without discarding unsaved metadata',async t=>{
+  const {page,requests}=await connected(t);
+  await page.getByRole('tab',{name:'カード管理',exact:true}).click();await page.locator('[data-parent="parent-b"]').click();
+  assert.equal(await page.locator('#cardDetail h2').textContent(),'No.002 RED');
+  await page.locator('#editName').fill('UNSAVED RED');
+  await page.locator('#editNumber').fill('1');await page.locator('#moveNumber').click();
+  assert.equal(await page.locator('#cardDetail h2').textContent(),'No.001 RED');
+  assert.equal(await page.locator('#editName').inputValue(),'UNSAVED RED');
+  await page.locator('#undoOrder').click();
+  assert.equal(await page.locator('#cardDetail h2').textContent(),'No.002 RED');
+  assert.equal(await page.locator('#editName').inputValue(),'UNSAVED RED');
+  await page.locator('[data-drag="parent-b"]').dragTo(page.locator('[data-drag="parent-a"]'));
+  assert.equal(await page.locator('#cardDetail h2').textContent(),'No.001 RED');
+  await page.locator('#saveOrder').click();await page.waitForFunction(()=>document.querySelector('#msg').classList.contains('ok'));
+  assert.equal(await page.locator('#cardDetail h2').textContent(),'No.001 RED');
+  assert.equal(await page.locator('#editName').inputValue(),'UNSAVED RED');
+  assert.deepEqual(requests.find(r=>r.action==='reorder').internal_ids,['parent-b','parent-a']);
+  assert.equal(requests.some(r=>r.action==='update-card'),false);
+  page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('tab',{name:'ゴミ箱',exact:true}).click();
+  assert.equal(await page.locator('#managePanel').isVisible(),true);
+  assert.equal(await page.locator('#editName').inputValue(),'UNSAVED RED');
+});
+
 test('saving metadata preserves an independently pending order draft',async t=>{
   const {page}=await connected(t);await page.getByRole('tab',{name:'カード管理',exact:true}).click();await page.locator('[data-parent="parent-a"]').click();
   await page.locator('#editNumber').fill('2');await page.locator('#moveNumber').click();await page.locator('#editAttack').fill('7');await page.locator('#saveParent').click();await page.waitForFunction(()=>document.querySelector('#msg').classList.contains('ok'));

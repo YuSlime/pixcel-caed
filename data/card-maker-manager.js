@@ -296,6 +296,8 @@
       element.addEventListener('dragover',event=>event.preventDefault());
       element.addEventListener('drop',event=>{event.preventDefault();if(busy)return;const id=dragId||event.dataTransfer.getData('text/plain');const target=state.activeCards().find(card=>card.internal_id===element.dataset.drag);if(id&&target){state.move(id,target.card_number);renderCardList();}dragId=null;});
     });
+    const selected=state.activeCards().find(card=>card.internal_id===state.selectedCard);
+    if($('editNumber')&&selected)$('cardDetail').querySelector('.detailTitle').textContent=`No.${number(selected.card_number)} ${selected.name}`;
     refreshActions();
   }
   function selectCard(id,variantId=null) {
