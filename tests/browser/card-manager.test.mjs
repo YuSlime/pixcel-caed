@@ -264,9 +264,9 @@ for(const fails of [false,true])test(`code list loading reports ${fails?'the req
   else{assert.match(await page.locator('#msg').textContent(),/コード.*読み込みました/);assert.equal(await page.locator('#msg').evaluate(element=>element.classList.contains('ok')),true);}
 });
 
-test('four light workspace tabs guard dirty edits and create uses next parent number',async t=>{
+test('five workspace tabs guard dirty edits and create uses next parent number',async t=>{
   const {page}=await connected(t);
-  assert.equal(await page.getByRole('tab').count(),4);
+  assert.equal(await page.getByRole('tab').count(),5);
   assert.equal(await page.locator('#variantName').inputValue(),'通常');
   assert.equal(await page.locator('body').evaluate(body=>getComputedStyle(body).backgroundColor),'rgb(244, 247, 251)');
   await page.locator('#cardName').fill('UNSAVED');
@@ -279,7 +279,8 @@ test('four light workspace tabs guard dirty edits and create uses next parent nu
 });
 test('workspace tabs offer one tab stop and arrow Home End keyboard movement',async t=>{
   const {page}=await connected(t);assert.equal(await page.getByRole('tab').evaluateAll(tabs=>tabs.filter(tab=>tab.tabIndex===0).length),1);
-  await page.locator('#tabCreate').focus();await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#tabManage').evaluate(tab=>tab===document.activeElement),true);
+  await page.locator('#tabCreate').focus();await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#tabStudio').evaluate(tab=>tab===document.activeElement),true);
+  await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#tabManage').evaluate(tab=>tab===document.activeElement),true);
   await page.keyboard.press('Enter');assert.equal(await page.locator('#managePanel').isVisible(),true);
   await page.keyboard.press('End');assert.equal(await page.locator('#tabCodes').evaluate(tab=>tab===document.activeElement),true);
   await page.keyboard.press('ArrowRight');assert.equal(await page.locator('#tabCreate').evaluate(tab=>tab===document.activeElement),true);

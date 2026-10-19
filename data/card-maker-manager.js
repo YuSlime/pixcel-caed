@@ -9,6 +9,7 @@
   const cost = $('cost'), attack = $('attack'), defense = $('defense'), rarity = $('rarity');
   const saveCard = $('saveCard'), savePng = $('savePng'), msg = $('msg'), result = $('result');
   let template = null, characterImage = null, characterUrl = '', sourceFile = null, imageSerial = 0, imageLoading = false, busy = false;
+  let studioRendered = null;
   const state = new window.CardManagerState();
   const api = new window.CardManagerApi(() => adminKey.value);
   let codes = [], editSerial = 0, dragId = null, adminKeyRevision = 0;
@@ -27,7 +28,7 @@
     msg.className = 'msg' + (error ? ' err' : success ? ' ok' : '');
   }
   function refreshActions() {
-    saveCard.disabled = savePng.disabled = !template || !characterImage || imageLoading || busy;
+    saveCard.disabled = savePng.disabled = (!template && !studioRendered) || (!characterImage && !studioRendered) || imageLoading || busy;
     [cardId, cardName, cost, attack, defense, rarity, adminKey, characterFile, $('variantName'), $('clearCharacter'), $('loadCards')]
       .forEach(element => { element.disabled = busy; });
     $('forgetKey').disabled=false;
@@ -36,10 +37,16 @@
     $('saveOrder').disabled = $('undoOrder').disabled = busy || !state.order.length;
   }
   function renderCard() {
-    if (template) core.drawCard(canvas, template, {
+    if (studioRendered) {
+      const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+      ctx.drawImage(studioRendered.image,0,0,canvas.width,canvas.height);
+    } else if (template) core.drawCard(canvas, template, {
       character: characterImage, name: cardName.value,
       cost: cost.value, attack: attack.value, defense: defense.value,
     });
+    $('studioSourceNotice').hidden=!studioRendered;
+    document.querySelector('.previewLabel .statusPill').textContent=studioRendered?'1086 × 1448 PNG':'512 × 682 PNG';
     refreshActions();
   }
 
@@ -59,6 +66,7 @@
       if (image.naturalWidth * image.naturalHeight > 60000000) throw new Error('60メガピクセル以下の画像を選択してください');
       if (serial !== imageSerial) return;
       if (characterUrl) URL.revokeObjectURL(characterUrl);
+      studioRendered = null;
       characterImage = image;
       sourceFile = file;
       characterUrl = candidateUrl;
@@ -79,6 +87,7 @@
     imageSerial++;
     imageLoading = false;
     characterImage = null;
+    studioRendered = null;
     sourceFile = null;
     if (characterUrl) URL.revokeObjectURL(characterUrl);
     characterUrl = '';
@@ -135,14 +144,14 @@
   });
 
   savePng.addEventListener('click', async () => {
-    if (!template || !characterImage || imageLoading || busy) return;
+    if ((!template && !studioRendered) || (!characterImage && !studioRendered) || imageLoading || busy) return;
     busy = true;
     refreshActions();
     try {
       if (document.fonts) await document.fonts.ready;
       renderCard();
       const id = slugify(cardId.value) || slugify(cardName.value) || 'card';
-      const file = await canvasFile(id);
+      const file = studioRendered ? new File([studioRendered.blob],`${id}.png`,{type:'image/png'}) : await canvasFile(id);
       const url = URL.createObjectURL(file);
       const link = document.createElement('a');
       link.href = url; link.download = `${id}.png`;
@@ -154,7 +163,7 @@
   });
 
   saveCard.addEventListener('click', async () => {
-    if (!template || !characterImage || imageLoading || busy) return;
+    if ((!template && !studioRendered) || (!characterImage && !studioRendered) || imageLoading || busy) return;
     result.classList.remove('show');
     const key = adminKey.value.trim(), revision = adminKeyRevision, id = slugify(cardId.value), name = core.normalizeName(cardName.value);
     if (!key) return show('ADMIN KEYを入力してください', true);
@@ -167,7 +176,7 @@
     try {
       if (document.fonts) await document.fonts.ready;
       renderCard();
-      const generatedFile = await canvasFile(id);
+      const generatedFile = studioRendered ? new File([studioRendered.blob],`${id}.png`,{type:'image/png'}) : await canvasFile(id);
       const form = new FormData();
       form.append('file', generatedFile);
       form.append('source_file', new File([await sourceFile.arrayBuffer()], sourceFile.name, { type:sourceFile.type }));
@@ -256,7 +265,7 @@
     $('cardDetail').innerHTML='<div class="empty">カードまたはVariantを選択してください</div>';
     $('codeDetail').innerHTML='<div class="empty">コードを選択するか新規作成してください</div>';
     document.querySelectorAll('[data-tab]').forEach(element=>{const selected=element.dataset.tab===tab;element.setAttribute('aria-selected',String(selected));element.tabIndex=selected?0:-1;});
-    for (const name of ['create','manage','trash','codes']) $(name+'Panel').hidden=name!==tab;
+    for (const name of ['create','studio','manage','trash','codes']) $(name+'Panel').hidden=name!==tab;
     renderLists();
     if (tab==='codes' && adminKey.value.trim()) working(async()=>{codes=(await api.request('list-codes')).codes||[];renderCodes();},'コード一覧を読み込みました');
   }
@@ -273,6 +282,44 @@
       else return;
       event.preventDefault();tabButtons.forEach((tab,tabIndex)=>{tab.tabIndex=tabIndex===target?0:-1;});tabButtons[target].focus();
     });
+  });
+  $('openStudioBtn').addEventListener('click',()=>{$('tabStudio').click();});
+  $('studioGoCreate').addEventListener('click',()=>{$('tabCreate').click();});
+  // The studio is loaded from this same site, in a same-origin iframe.
+  // Only explicitly requested transfers populate the registration form;
+  // uploading to Supabase still requires the user's separate Save action and admin key.
+  window.addEventListener('message',async event=>{
+    if(event.origin!==window.location.origin || event.source!==$('studioFrame').contentWindow)return;
+    const data=event.data;
+    if(data?.type!=='pixel-card-studio:apply'||data.version!==1||busy)return;
+    const p=data.payload;
+    if(!(p?.rendered instanceof Blob)||p.rendered.type!=='image/png'||p.rendered.size<100||p.rendered.size>16*1024*1024||p.width!==1086||p.height!==1448){
+      show('StudioからのPNGが不正です。もう一度書き出してください。',true);return;
+    }
+    const url=URL.createObjectURL(p.rendered);
+    try{
+      const image=await core.loadImage(url);
+      if(image.naturalWidth!==1086||image.naturalHeight!==1448)throw new Error('完成カードは1086×1448pxである必要があります');
+      const source=p.source instanceof Blob&&p.source.type.startsWith('image/')&&p.source.size<=8*1024*1024?p.source:p.rendered;
+      if(!state.navigate('create',window.confirm.bind(window))){URL.revokeObjectURL(url);return;}
+      editSerial++;
+      resetCreate();
+      if(characterUrl)URL.revokeObjectURL(characterUrl);
+      studioRendered={blob:p.rendered,image};
+      characterImage=image;characterUrl=url;
+      sourceFile=new File([source],`studio-source.${source.type==='image/jpeg'?'jpg':source.type==='image/webp'?'webp':'png'}`,{type:source.type});
+      characterThumb.src=url;characterDrop.classList.add('has');
+      const ascii=String(p.name||p.title||'').replace(/[^A-Za-z0-9 _-]/g,'').replace(/ +/g,' ').trim().slice(0,80);
+      cardName.value=ascii;cardId.value=slugify(ascii);delete cardId.dataset.manual;
+      for(const [control,value] of [[cost,p.cost],[attack,p.attack],[defense,p.defense]]){
+        const v=String(value??'1');control.value=/^\d{1,2}$/.test(v)?v:'1';
+      }
+      state.dirty=true;
+      document.querySelectorAll('[data-tab]').forEach(tab=>{const active=tab.dataset.tab==='create';tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;});
+      for(const tab of ['create','studio','manage','trash','codes'])$(tab+'Panel').hidden=tab!=='create';
+      renderCard();
+      show(ascii?'Studioの完成PNGを読み込みました。管理キーを確認してカードを作成してください。':'完成PNGを読み込みました。管理用のカード名とID（英数字）を入力してから保存してください。',false,true);
+    }catch(error){URL.revokeObjectURL(url);show('Studioのカードを受け取れませんでした: '+(error.message||error),true);}
   });
   window.addEventListener('beforeunload',event=>{if(state.hasChanges()){event.preventDefault();event.returnValue='';}});
   $('loadCards').addEventListener('click',()=>{
