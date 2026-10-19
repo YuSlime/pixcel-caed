@@ -54,8 +54,23 @@ test('V1 cannot be independently trashed or deleted',async()=>{
   for(const action of ['trash-variant','delete-variant']) assert.equal((await handler(request({action,internal_id:'v1'}))).status,400);
   assert.equal(calls.filter(c=>c[0]==='mutate').length,0);
 });
-function png(){const b=new Uint8Array(24);b.set([137,80,78,71,13,10,26,10]);new DataView(b.buffer).setUint32(16,512);new DataView(b.buffer).setUint32(20,682);return new File([b],'test.png',{type:'image/png'});}
-function imageRequest(){const form=new FormData();for(const [k,v] of Object.entries({action:'create-card',id:'test',name:'TEST',cost:'0',attack:'99',defense:'1',rarity:'Common',variant_name:'通常'}))form.append(k,v);form.append('file',png());form.append('source_file',png());return new Request('https://example.test',{method:'POST',headers:{'x-admin-key':key},body:form});}
+function png(width=512,height=682){const b=new Uint8Array(24);b.set([137,80,78,71,13,10,26,10]);new DataView(b.buffer).setUint32(16,width);new DataView(b.buffer).setUint32(20,height);return new File([b],'test.png',{type:'image/png'});}
+function imageRequest(rendered=png()){const form=new FormData();for(const [k,v] of Object.entries({action:'create-card',id:'test',name:'TEST',cost:'0',attack:'99',defense:'1',rarity:'Common',variant_name:'通常'}))form.append(k,v);form.append('file',rendered);form.append('source_file',png());return new Request('https://example.test',{method:'POST',headers:{'x-admin-key':key},body:form});}
+test('supports original 512 × 682 and Studio 1086 × 1448 cards without accepting arbitrary sizes',async()=>{
+  for(const [width,height] of [[512,682],[1086,1448]]){
+    const {handler,calls}=await setup();
+    const result=await handler(imageRequest(png(width,height)));
+    assert.equal(result.status,200,`expected ${width}x${height} to be accepted: ${JSON.stringify(await result.json())}`);
+    assert.equal(calls.filter(c=>c[0]==='upload').length,2);
+  }
+  for(const [width,height] of [[1086,682],[512,1448],[1086,1447],[256,341]]){
+    const {handler,calls}=await setup();
+    const result=await handler(imageRequest(png(width,height)));
+    assert.equal(result.status,400,`unexpectedly accepted ${width}x${height}`);
+    assert.match((await result.json()).error,/512.*682.*1086.*1448/);
+    assert.equal(calls.filter(c=>c[0]==='upload').length,0);
+  }
+});
 test('uploads source and rendered separately before one atomic create and cleans uploads on database failure',async()=>{
   const {handler,calls}=await setup();assert.equal((await handler(imageRequest())).status,200);
   assert.deepEqual(calls.filter(c=>['upload','mutate'].includes(c[0])).map(c=>c[0]),['upload','upload','mutate']);

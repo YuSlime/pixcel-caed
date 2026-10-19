@@ -42,7 +42,12 @@ async function validateImage(file, rendered) {
   const isJpeg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
   const isWebp=String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
   check(file.type==='image/png'?isPng:file.type==='image/jpeg'?isJpeg:isWebp,'Image content does not match its type');
-  if(rendered) { check(bytes.length>=24,'Invalid PNG');const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);check(view.getUint32(16)===512&&view.getUint32(20)===682,'Rendered card must be 512 × 682 PNG'); }
+  if(rendered) {
+    check(bytes.length>=24,'Invalid PNG');
+    const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+    const width=view.getUint32(16),height=view.getUint32(20);
+    check((width===512&&height===682)||(width===1086&&height===1448),'Rendered card must be 512 × 682 or 1086 × 1448 PNG');
+  }
 }
 function safeError(req,error) {
   if(error instanceof InputError) return response(req,{error:error.message},400);
